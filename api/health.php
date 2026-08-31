@@ -20,7 +20,7 @@ try {
     ]);
 } catch (Throwable $e) {
     http_response_code(500);
-    $cfg = require __DIR__ . '/../config.php';
+    $cfg = $GLOBALS['__app_config'] ?? require __DIR__ . '/../config.php';
     echo json_encode([
         'ok' => false,
         'error' => $e->getMessage(),

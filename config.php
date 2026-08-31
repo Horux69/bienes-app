@@ -1,54 +1,61 @@
 <?php
 // Credenciales: .env (Easypanel/Docker), variables de entorno, o config.local.php (local).
 
-function cargarArchivoEnv(string $path): void
-{
-    if (!is_readable($path)) {
-        return;
-    }
+if (isset($GLOBALS['__app_config'])) {
+    return $GLOBALS['__app_config'];
+}
 
-    $lineas = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if ($lineas === false) {
-        return;
-    }
-
-    foreach ($lineas as $linea) {
-        $linea = trim($linea);
-        if ($linea === '' || str_starts_with($linea, '#')) {
-            continue;
-        }
-        if (!str_contains($linea, '=')) {
-            continue;
+if (!function_exists('cargarArchivoEnv')) {
+    function cargarArchivoEnv(string $path): void
+    {
+        if (!is_readable($path)) {
+            return;
         }
 
-        [$clave, $valor] = explode('=', $linea, 2);
-        $clave = trim($clave);
-        $valor = trim($valor, " \t\n\r\0\x0B\"'");
-
-        if ($clave === '') {
-            continue;
+        $lineas = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lineas === false) {
+            return;
         }
 
-        // No sobrescribir variables ya definidas en el sistema.
-        if (getenv($clave) !== false) {
-            continue;
-        }
+        foreach ($lineas as $linea) {
+            $linea = trim($linea);
+            if ($linea === '' || str_starts_with($linea, '#')) {
+                continue;
+            }
+            if (!str_contains($linea, '=')) {
+                continue;
+            }
 
-        putenv("{$clave}={$valor}");
-        $_ENV[$clave] = $valor;
+            [$clave, $valor] = explode('=', $linea, 2);
+            $clave = trim($clave);
+            $valor = trim($valor, " \t\n\r\0\x0B\"'");
+
+            if ($clave === '') {
+                continue;
+            }
+
+            if (getenv($clave) !== false) {
+                continue;
+            }
+
+            putenv("{$clave}={$valor}");
+            $_ENV[$clave] = $valor;
+        }
     }
 }
 
-function envVar(string $clave, string $default = ''): string
-{
-    $valor = getenv($clave);
-    if ($valor !== false && $valor !== '') {
-        return $valor;
+if (!function_exists('envVar')) {
+    function envVar(string $clave, string $default = ''): string
+    {
+        $valor = getenv($clave);
+        if ($valor !== false && $valor !== '') {
+            return $valor;
+        }
+        if (isset($_ENV[$clave]) && $_ENV[$clave] !== '') {
+            return (string) $_ENV[$clave];
+        }
+        return $default;
     }
-    if (isset($_ENV[$clave]) && $_ENV[$clave] !== '') {
-        return (string) $_ENV[$clave];
-    }
-    return $default;
 }
 
 cargarArchivoEnv(__DIR__ . '/.env');
@@ -75,5 +82,7 @@ $local = __DIR__ . '/config.local.php';
 if (is_file($local)) {
     $cfg = array_replace_recursive($cfg, require $local);
 }
+
+$GLOBALS['__app_config'] = $cfg;
 
 return $cfg;
