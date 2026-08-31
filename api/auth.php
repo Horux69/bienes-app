@@ -15,9 +15,17 @@ try {
             $total = (int) $pdo->query('SELECT COUNT(*) FROM usuarios')->fetchColumn();
             responderJsonAuth(200, ['ok' => true, 'needs_setup' => $total === 0]);
         } catch (Throwable $e) {
+            $detalle = $e->getMessage();
+            $esTabla = str_contains($detalle, 'does not exist')
+                || str_contains($detalle, '42P01')
+                || str_contains($detalle, 'usuarios');
+
             responderJsonAuth(500, [
                 'ok' => false,
-                'error' => 'La tabla usuarios no existe. Ejecute migrations/001_usuarios.sql en Supabase.',
+                'error' => $esTabla
+                    ? 'La tabla usuarios no existe. Ejecute migrations/001_usuarios.sql en Supabase.'
+                    : 'No se pudo conectar a la base de datos. Verifique las variables de entorno en el servidor.',
+                'detalle' => $detalle,
             ]);
         }
     }
