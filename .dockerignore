@@ -1,0 +1,10 @@
+.env
+.env.example
+.git
+.gitignore
+config.local.php
+config.local.php.example
+setup-hosts.bat
+*.zip
+*.md
+README.md

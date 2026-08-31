@@ -1,0 +1,11 @@
+# Secretos y archivos locales
+config.local.php
+.env
+
+# Desarrollo
+setup-hosts.bat
+*.zip
+
+# Git / IDE
+.DS_Store
+Thumbs.db

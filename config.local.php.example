@@ -1,0 +1,16 @@
+<?php
+// Copia este archivo a config.local.php y completa tus credenciales.
+// config.local.php NO se sube a GitHub.
+
+return [
+    'db' => [
+        'host' => 'db.tuproyecto.supabase.co',
+        'password' => 'TU_PASSWORD_SUPABASE',
+    ],
+    'storage' => [
+        'url' => 'https://tuproyecto.supabase.co/storage/v1',
+        'bucket' => 'BIENES',
+        'bucket_public' => false,
+        'service_key' => 'sb_secret_TU_CLAVE_AQUI',
+    ],
+];
