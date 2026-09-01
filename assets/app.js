@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     informes: 'Informes',
   };
 
-  function cambiarTab(tab) {
+  function cambiarTab(tab, opts = {}) {
     tabButtons.forEach(b => {
       b.classList.toggle('active', b.dataset.tab === tab);
     });
@@ -210,6 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
     panelUsuarios.classList.toggle('d-none', tab !== 'usuarios');
     panelInformes?.classList.toggle('d-none', tab !== 'informes');
     panelPerfil.classList.toggle('d-none', tab !== 'perfil');
+    if (tab === 'registrar' && !opts.mantenerFormulario) {
+      resetFormulario();
+    }
     if (tab === 'listado') cargarListado();
     if (tab === 'informes') initInformes();
     if (tab === 'perfil') cargarPerfil();
@@ -607,7 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnCancelar.addEventListener('click', () => {
-    resetFormulario();
     cambiarTab('registrar');
   });
 
@@ -654,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fotosExistentes = [...(reg.fotos || [])];
     renderFotos();
     cargarChecklistPreparacion(reg);
-    cambiarTab('registrar');
+    cambiarTab('registrar', { mantenerFormulario: true });
   }
 
   // ─── Listado ───────────────────────────────────────────────
