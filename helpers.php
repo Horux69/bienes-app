@@ -193,6 +193,33 @@ function urlConsultaPublica(string $codigo): string
     return urlBaseApp() . '/ver.php?codigo=' . rawurlencode($codigo);
 }
 
+function generarQrSvg(string $texto, int $scale = 4): string
+{
+    if ($texto === '') {
+        return '';
+    }
+
+    $autoload = __DIR__ . '/vendor/autoload.php';
+    if (!is_file($autoload)) {
+        return '';
+    }
+
+    require_once $autoload;
+
+    if (!class_exists(\chillerlan\QRCode\QRCode::class)) {
+        return '';
+    }
+
+    $options = new \chillerlan\QRCode\QROptions([
+        'outputType' => \chillerlan\QRCode\QRCode::OUTPUT_MARKUP_SVG,
+        'scale' => $scale,
+        'margin' => 1,
+        'svgAddXmlHeader' => false,
+    ]);
+
+    return (new \chillerlan\QRCode\QRCode($options))->render($texto);
+}
+
 function aplicarUrlsFotos(array $fotos): array
 {
     require_once __DIR__ . '/storage.php';

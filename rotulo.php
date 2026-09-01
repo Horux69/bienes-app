@@ -42,6 +42,7 @@ function fmtFecha(?string $fecha): string
 }
 
 $urlConsulta = $registro ? urlConsultaPublica($registro['codigo']) : '';
+$qrSvg = $registro ? generarQrSvg($urlConsulta) : '';
 $perifTexto = '';
 if ($registro && !empty($registro['perifericos'])) {
     $perifTexto = implode(', ', array_map(
@@ -65,6 +66,7 @@ if ($registro && !empty($registro['perifericos'])) {
   .toolbar {
     padding: .75rem 1rem; background: #1f4e79; color: #fff;
     display: flex; gap: .75rem; align-items: center; justify-content: center;
+    flex-wrap: wrap;
   }
   .toolbar button {
     border: 0; background: #fff; color: #1f4e79; font-weight: 700;
@@ -84,7 +86,31 @@ if ($registro && !empty($registro['perifericos'])) {
   }
   .rotulo-brand { font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: .08em; }
   .rotulo-codigo { font-size: 13pt; font-weight: 800; letter-spacing: .05em; margin-top: 1mm; }
-  .rotulo-qr canvas, .rotulo-qr img { display: block; width: 24mm !important; height: 24mm !important; }
+  .rotulo-qr {
+    flex-shrink: 0;
+    width: 26mm;
+    height: 26mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 1mm;
+    background: #fff;
+  }
+  .rotulo-qr svg {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .rotulo-qr-fallback {
+    font-size: 6pt;
+    color: #64748b;
+    text-align: center;
+    word-break: break-all;
+    line-height: 1.2;
+    padding: 2px;
+  }
   .rotulo-tipo { font-size: 11pt; font-weight: 700; margin-bottom: 3mm; line-height: 1.25; }
   .rotulo-line { font-size: 8.5pt; line-height: 1.35; margin-bottom: 1.5mm; }
   .rotulo-line strong { color: #475569; font-weight: 600; }
@@ -101,6 +127,7 @@ if ($registro && !empty($registro['perifericos'])) {
     .toolbar { display: none !important; }
     .rotulo-page { padding: 0; }
     .rotulo { box-shadow: none; border: 1px solid #000; border-radius: 0; }
+    .rotulo-qr { border-color: #000; }
   }
   @page { size: 100mm 62mm; margin: 0; }
 </style>
@@ -120,7 +147,13 @@ if ($registro && !empty($registro['perifericos'])) {
           <div class="rotulo-brand">Trazabilidad de bienes</div>
           <div class="rotulo-codigo"><?= e($registro['codigo']) ?></div>
         </div>
-        <div class="rotulo-qr"><canvas id="qrCanvas" aria-hidden="true"></canvas></div>
+        <div class="rotulo-qr" title="<?= e($urlConsulta) ?>">
+          <?php if ($qrSvg !== ''): ?>
+            <?= $qrSvg ?>
+          <?php else: ?>
+            <div class="rotulo-qr-fallback">QR no disponible</div>
+          <?php endif; ?>
+        </div>
       </div>
       <div class="rotulo-tipo"><?= e($registro['tipo_bien_nombre']) ?></div>
       <div class="rotulo-line"><strong>Municipio:</strong> <?= e($registro['municipio_nombre']) ?></div>
@@ -136,14 +169,6 @@ if ($registro && !empty($registro['perifericos'])) {
       <div class="rotulo-foot">Escanee el QR para consultar este bien</div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script>
-    QRCode.toCanvas(document.getElementById('qrCanvas'), <?= json_encode($urlConsulta, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, {
-      width: 120,
-      margin: 1,
-      color: { dark: '#0f172a', light: '#ffffff' }
-    });
-  </script>
 <?php endif; ?>
 </body>
 </html>
