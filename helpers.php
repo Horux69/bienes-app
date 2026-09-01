@@ -334,9 +334,7 @@ function listarRegistros(PDO $pdo, array $filtros = [], int $limite = 500): arra
 
     $sql = '
         SELECT rb.*, tb.nombre AS tipo_bien_nombre, tb.unidad AS tipo_bien_unidad,
-               (SELECT ruta FROM fotos_bienes fb WHERE fb.registro_bien_id = rb.id ORDER BY fb.created_at LIMIT 1) AS foto_principal,
-               (SELECT COALESCE(string_agg(rp.periferico_id::text, \',\'), \'\')
-                FROM registro_perifericos rp WHERE rp.registro_bien_id = rb.id) AS periferico_ids
+               (SELECT ruta FROM fotos_bienes fb WHERE fb.registro_bien_id = rb.id ORDER BY fb.created_at LIMIT 1) AS foto_principal
         FROM registros_bienes rb
         INNER JOIN tipos_bienes tb ON tb.id = rb.tipo_bien_id
         WHERE ' . implode(' AND ', $where) . '

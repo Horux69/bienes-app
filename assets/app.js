@@ -135,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let usuarioSesion = null;
   let listadoFiltrosListos = false;
   let informeFiltrosListos = false;
+  let catalogCache = { municipios: null, tipos: null, perifericos: null };
 
   fechaInput.value = new Date().toISOString().slice(0, 10);
 
@@ -182,6 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     appPrincipal.classList.remove('d-none');
+    asegurarFiltrosListado().catch(() => {});
+    fetchApi(API_REGISTROS).then(({ data }) => {
+      if (data.ok && Array.isArray(data.registros)) {
+        registrosCache = data.registros;
+        registrosTotal = data.registros.length;
+      }
+    }).catch(() => {});
     return true;
   }
 
@@ -241,12 +249,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function cargarCatalogosIniciales() {
+  async function obtenerCatalogosBase() {
+    if (catalogCache.municipios) {
+      return catalogCache;
+    }
     const [municipios, tipos, perifericos] = await Promise.all([
       fetchCatalogo('municipios'),
       fetchCatalogo('tipos_bienes'),
       fetchCatalogo('perifericos'),
     ]);
+    catalogCache = { municipios, tipos, perifericos };
+    return catalogCache;
+  }
+
+  async function cargarCatalogosIniciales() {
+    const { municipios, tipos, perifericos } = await obtenerCatalogosBase();
     llenarSelect(municipioSelect, municipios, 'Seleccione municipio…');
     llenarSelect(tipoSelect, tipos, 'Seleccione tipo…');
     catalogoPerifericos = perifericos;
@@ -698,11 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function asegurarFiltrosListado() {
     if (listadoFiltrosListos) return;
-    const [municipios, tipos, perifericos] = await Promise.all([
-      fetchCatalogo('municipios'),
-      fetchCatalogo('tipos_bienes'),
-      fetchCatalogo('perifericos'),
-    ]);
+    const { municipios, tipos, perifericos } = await obtenerCatalogosBase();
     llenarSelect(filtroMunicipio, municipios, 'Todos');
     llenarSelect(filtroTipo, tipos, 'Todos');
     llenarSelect(filtroPeriferico, perifericos, 'Todos');
@@ -870,16 +883,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function cargarListado() {
-    listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Cargando…</p></div>';
+    const f = obtenerFiltrosListado();
+    const filtrado = hayFiltrosActivos(f);
+
+    if (!filtrado && registrosCache.length) {
+      renderListado(registrosCache, false);
+      renderFiltrosActivos(f);
+      actualizarEstadoFiltrosUI(f);
+    } else if (filtrado) {
+      listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Filtrando…</p></div>';
+    } else {
+      listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Cargando…</p></div>';
+    }
+
     try {
-      await asegurarFiltrosListado();
-      const { data } = await fetchApi(API_REGISTROS);
+      const peticionRegistros = filtrado
+        ? fetchApi(`${API_REGISTROS}?${construirQueryFiltros(f)}`)
+        : fetchApi(API_REGISTROS);
+
+      const [, listResp] = await Promise.all([
+        asegurarFiltrosListado(),
+        peticionRegistros,
+      ]);
+
+      const { data } = listResp;
       if (!data.ok) throw new Error(data.error || 'Error al cargar.');
-      registrosCache = data.registros;
-      registrosTotal = data.registros.length;
-      await aplicarFiltrosListado();
+
+      if (!filtrado) {
+        registrosCache = data.registros;
+        registrosTotal = data.registros.length;
+      }
+
+      renderListado(filtrado ? data.registros : registrosCache, filtrado);
+      renderFiltrosActivos(f);
+      actualizarEstadoFiltrosUI(f);
     } catch (err) {
-      listaRegistros.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p class="text-danger mb-0">${escapeHtml(err.message)}</p></div>`;
+      if (!registrosCache.length) {
+        listaRegistros.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p class="text-danger mb-0">${escapeHtml(err.message)}</p></div>`;
+      }
     }
   }
 
@@ -945,11 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function asegurarFiltrosInforme() {
     if (informeFiltrosListos) return;
-    const [municipios, tipos, perifericos] = await Promise.all([
-      fetchCatalogo('municipios'),
-      fetchCatalogo('tipos_bienes'),
-      fetchCatalogo('perifericos'),
-    ]);
+    const { municipios, tipos, perifericos } = await obtenerCatalogosBase();
     llenarSelect(informeMunicipio, municipios, 'Todos');
     llenarSelect(informeTipo, tipos, 'Todos');
     llenarSelect(informePeriferico, perifericos, 'Todos');
@@ -1095,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     listaRegistros.innerHTML = registros.map(r => `
       <div class="item-card" data-id="${r.id}">
         ${r.foto_principal
-          ? `<img src="${escapeAttr(r.foto_principal)}" class="item-thumb" alt="">`
+          ? `<img src="${escapeAttr(r.foto_principal)}" class="item-thumb" alt="" loading="lazy" decoding="async">`
           : THUMB_PLACEHOLDER}
         <div class="code-badge mb-2">${escapeHtml(r.codigo)}</div>
         <div class="item-title">${escapeHtml(r.tipo_bien_nombre)}</div>
@@ -1649,5 +1686,6 @@ document.addEventListener('DOMContentLoaded', () => {
       msgForm.textContent = 'Error al cargar catálogos: ' + err.message;
       msgForm.className = 'msg-feedback text-danger';
     });
+    asegurarFiltrosListado().catch(() => {});
   });
 });
