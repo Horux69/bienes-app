@@ -42,7 +42,7 @@ function fmtFecha(?string $fecha): string
 }
 
 $urlConsulta = $registro ? urlConsultaPublica($registro['codigo']) : '';
-$qrSvg = $registro ? generarQrSvg($urlConsulta) : '';
+$qrDataUri = $registro ? generarQrDataUri($urlConsulta) : '';
 $perifTexto = '';
 if ($registro && !empty($registro['perifericos'])) {
     $perifTexto = implode(', ', array_map(
@@ -98,10 +98,11 @@ if ($registro && !empty($registro['perifericos'])) {
     padding: 1mm;
     background: #fff;
   }
-  .rotulo-qr svg {
+  .rotulo-qr img {
     display: block;
-    width: 100% !important;
-    height: 100% !important;
+    width: 24mm;
+    height: 24mm;
+    object-fit: contain;
   }
   .rotulo-qr-fallback {
     font-size: 6pt;
@@ -148,8 +149,8 @@ if ($registro && !empty($registro['perifericos'])) {
           <div class="rotulo-codigo"><?= e($registro['codigo']) ?></div>
         </div>
         <div class="rotulo-qr" title="<?= e($urlConsulta) ?>">
-          <?php if ($qrSvg !== ''): ?>
-            <?= $qrSvg ?>
+          <?php if ($qrDataUri !== ''): ?>
+            <img src="<?= e($qrDataUri) ?>" alt="QR <?= e($registro['codigo']) ?>" width="120" height="120">
           <?php else: ?>
             <div class="rotulo-qr-fallback">QR no disponible</div>
           <?php endif; ?>

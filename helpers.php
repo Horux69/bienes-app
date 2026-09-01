@@ -193,7 +193,7 @@ function urlConsultaPublica(string $codigo): string
     return urlBaseApp() . '/ver.php?codigo=' . rawurlencode($codigo);
 }
 
-function generarQrSvg(string $texto, int $scale = 4): string
+function generarQrDataUri(string $texto, int $scale = 4): string
 {
     if ($texto === '') {
         return '';
@@ -212,9 +212,9 @@ function generarQrSvg(string $texto, int $scale = 4): string
 
     $options = new \chillerlan\QRCode\QROptions([
         'outputType' => \chillerlan\QRCode\QRCode::OUTPUT_MARKUP_SVG,
+        'outputBase64' => true,
         'scale' => $scale,
         'margin' => 1,
-        'svgAddXmlHeader' => false,
     ]);
 
     return (new \chillerlan\QRCode\QRCode($options))->render($texto);
