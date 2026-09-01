@@ -149,7 +149,21 @@ function aplicarUrlsFotos(array $fotos): array
     return $fotos;
 }
 
-function listarRegistros(PDO $pdo, array $filtros = []): array
+function filtrosDesdeRequest(array $source): array
+{
+    return array_filter([
+        'municipio_id'   => $source['municipio_id'] ?? null,
+        'juzgado_id'     => $source['juzgado_id'] ?? null,
+        'responsable_id' => $source['responsable_id'] ?? null,
+        'tipo_bien_id'   => $source['tipo_bien_id'] ?? null,
+        'fecha_desde'    => $source['fecha_desde'] ?? null,
+        'fecha_hasta'    => $source['fecha_hasta'] ?? null,
+        'periferico_id'  => $source['periferico_id'] ?? null,
+        'q'              => trim((string) ($source['q'] ?? '')) ?: null,
+    ], fn ($v) => $v !== null && $v !== '');
+}
+
+function buildRegistrosWhereClause(array $filtros): array
 {
     $where = ['1=1'];
     $params = [];
@@ -194,6 +208,29 @@ function listarRegistros(PDO $pdo, array $filtros = []): array
         array_push($params, $like, $like, $like, $like, $like, $like);
     }
 
+    return [$where, $params];
+}
+
+function contarRegistros(PDO $pdo, array $filtros = []): int
+{
+    [$where, $params] = buildRegistrosWhereClause($filtros);
+    $sql = '
+        SELECT COUNT(*)
+        FROM registros_bienes rb
+        INNER JOIN tipos_bienes tb ON tb.id = rb.tipo_bien_id
+        WHERE ' . implode(' AND ', $where);
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return (int) $stmt->fetchColumn();
+}
+
+function listarRegistros(PDO $pdo, array $filtros = [], int $limite = 500): array
+{
+    [$where, $params] = buildRegistrosWhereClause($filtros);
+    $limite = max(1, min(5000, $limite));
+
     $sql = '
         SELECT rb.*, tb.nombre AS tipo_bien_nombre, tb.unidad AS tipo_bien_unidad,
                (SELECT ruta FROM fotos_bienes fb WHERE fb.registro_bien_id = rb.id ORDER BY fb.created_at LIMIT 1) AS foto_principal,
@@ -203,8 +240,7 @@ function listarRegistros(PDO $pdo, array $filtros = []): array
         INNER JOIN tipos_bienes tb ON tb.id = rb.tipo_bien_id
         WHERE ' . implode(' AND ', $where) . '
         ORDER BY rb.fecha_registro DESC, rb.created_at DESC
-        LIMIT 500
-    ';
+        LIMIT ' . $limite;
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -215,6 +251,137 @@ function listarRegistros(PDO $pdo, array $filtros = []): array
         if (!empty($registro['foto_principal'])) {
             $registro['foto_principal'] = urlFotoVisible($registro['foto_principal']);
         }
+    }
+    unset($registro);
+
+    return $registros;
+}
+
+function urlBaseApp(): string
+{
+    $scheme = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')) ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+    $base = rtrim(dirname($script), '/\\');
+    if (str_ends_with(strtolower($base), '/api')) {
+        $base = dirname($base);
+    }
+    if ($base === '/' || $base === '\\' || $base === '.') {
+        $base = '';
+    }
+
+    return $scheme . '://' . $host . $base;
+}
+
+function urlFotoAbsoluta(string $ruta): string
+{
+    require_once __DIR__ . '/storage.php';
+    $rel = urlFotoVisible($ruta);
+    if ($rel === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $rel)) {
+        return $rel;
+    }
+
+    return urlBaseApp() . '/' . ltrim($rel, '/');
+}
+
+function nombreCatalogo(PDO $pdo, string $tabla, int $id): string
+{
+    $permitidas = [
+        'municipios'    => 'municipios',
+        'juzgados'      => 'juzgados',
+        'responsables'  => 'responsables',
+        'tipos_bienes'  => 'tipos_bienes',
+        'perifericos'   => 'perifericos',
+    ];
+    if (!isset($permitidas[$tabla])) {
+        return (string) $id;
+    }
+
+    $stmt = $pdo->prepare('SELECT nombre FROM ' . $permitidas[$tabla] . ' WHERE id = ?');
+    $stmt->execute([$id]);
+
+    return (string) ($stmt->fetchColumn() ?: $id);
+}
+
+function describirFiltrosInforme(PDO $pdo, array $filtros): string
+{
+    $partes = [];
+
+    if (!empty($filtros['municipio_id'])) {
+        $partes[] = 'Municipio: ' . nombreCatalogo($pdo, 'municipios', (int) $filtros['municipio_id']);
+    }
+    if (!empty($filtros['juzgado_id'])) {
+        $partes[] = 'Juzgado: ' . nombreCatalogo($pdo, 'juzgados', (int) $filtros['juzgado_id']);
+    }
+    if (!empty($filtros['responsable_id'])) {
+        $partes[] = 'Responsable: ' . nombreCatalogo($pdo, 'responsables', (int) $filtros['responsable_id']);
+    }
+    if (!empty($filtros['tipo_bien_id'])) {
+        $partes[] = 'Tipo: ' . nombreCatalogo($pdo, 'tipos_bienes', (int) $filtros['tipo_bien_id']);
+    }
+    if (!empty($filtros['periferico_id'])) {
+        $partes[] = 'Periférico: ' . nombreCatalogo($pdo, 'perifericos', (int) $filtros['periferico_id']);
+    }
+    if (!empty($filtros['fecha_desde'])) {
+        $partes[] = 'Desde: ' . $filtros['fecha_desde'];
+    }
+    if (!empty($filtros['fecha_hasta'])) {
+        $partes[] = 'Hasta: ' . $filtros['fecha_hasta'];
+    }
+    if (!empty($filtros['q'])) {
+        $partes[] = 'Búsqueda: "' . $filtros['q'] . '"';
+    }
+
+    return $partes ? implode(' | ', $partes) : 'Todos los registros (sin filtros)';
+}
+
+function enriquecerRegistrosInforme(PDO $pdo, array $registros): array
+{
+    if ($registros === []) {
+        return [];
+    }
+
+    $ids = array_map('intval', array_column($registros, 'id'));
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+    $stmt = $pdo->prepare("
+        SELECT rp.registro_bien_id, p.nombre, rp.cantidad
+        FROM registro_perifericos rp
+        INNER JOIN perifericos p ON p.id = rp.periferico_id
+        WHERE rp.registro_bien_id IN ($placeholders)
+        ORDER BY p.nombre
+    ");
+    $stmt->execute($ids);
+    $perifPorRegistro = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $perifPorRegistro[$row['registro_bien_id']][] = $row['nombre'] . ' (' . $row['cantidad'] . ')';
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT registro_bien_id, ruta
+        FROM fotos_bienes
+        WHERE registro_bien_id IN ($placeholders)
+        ORDER BY created_at
+    ");
+    $stmt->execute($ids);
+    $fotosPorRegistro = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $url = urlFotoAbsoluta($row['ruta']);
+        if ($url !== '') {
+            $fotosPorRegistro[$row['registro_bien_id']][] = $url;
+        }
+    }
+
+    foreach ($registros as &$registro) {
+        $id = (int) $registro['id'];
+        $registro['perifericos_texto'] = implode(', ', $perifPorRegistro[$id] ?? []) ?: '—';
+        $registro['fotos_urls'] = $fotosPorRegistro[$id] ?? [];
+        $registro['fotos_urls_texto'] = implode("\n", $registro['fotos_urls']);
+        $registro['num_fotos'] = count($registro['fotos_urls']);
     }
     unset($registro);
 

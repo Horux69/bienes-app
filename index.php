@@ -46,6 +46,10 @@
           <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 7h5l2 2h11v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
           <span>Catálogos</span>
         </button>
+        <button type="button" class="nav-link" id="tabInformesItem" data-tab="informes">
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Informes</span>
+        </button>
         <button type="button" class="nav-link" id="tabUsuariosItem" data-tab="usuarios">
           <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-2.8 2.7-5 6-5s6 2.2 6 5M14 19c0-2 1.6-3.6 3.5-3.9"/></svg>
           <span>Usuarios</span>
@@ -165,6 +169,10 @@
                    placeholder="Buscar por código, juzgado, municipio, responsable…" autocomplete="off">
           </div>
           <span class="stats-pill" id="statsRegistros">0 registros</span>
+          <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnExportarListado" title="Exportar a Excel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Excel
+          </button>
         </div>
 
         <div class="listado-filtros card-panel" id="panelFiltrosListado">
@@ -311,6 +319,67 @@
         </div>
       </div>
 
+      <!-- INFORMES -->
+      <div id="panelInformes" class="d-none">
+        <div class="card-panel mb-3">
+          <div class="section-title">Exportar informe detallado</div>
+          <p class="text-secondary small mb-3">
+            Genera un archivo Excel con todos los campos del registro, periféricos y URLs de fotografías
+            (accesibles vía web con sesión iniciada). Máximo 5.000 registros por exportación.
+          </p>
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <button type="button" class="btn btn-brand" id="btnExportarInforme">Descargar Excel</button>
+            <button type="button" class="btn btn-outline-secondary" id="btnPreviewInforme">Vista previa</button>
+            <span class="stats-pill" id="informePreview">—</span>
+          </div>
+          <div id="msgInforme" class="msg-feedback"></div>
+        </div>
+
+        <div class="listado-filtros card-panel" id="panelFiltrosInforme">
+          <div class="listado-filtros-header">
+            <span class="section-title mb-0">Filtros del informe</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLimpiarFiltrosInforme">Limpiar filtros</button>
+          </div>
+          <div class="listado-filtros-body">
+            <div class="mb-3">
+              <label class="form-label" for="informeBuscar">Búsqueda</label>
+              <input type="search" class="form-control form-control-sm" id="informeBuscar"
+                     placeholder="Código, municipio, juzgado, responsable…" autocomplete="off">
+            </div>
+            <div class="listado-filtros-grid">
+              <div>
+                <label class="form-label" for="informeMunicipio">Municipio</label>
+                <select class="form-select form-select-sm" id="informeMunicipio"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="informeJuzgado">Juzgado</label>
+                <select class="form-select form-select-sm" id="informeJuzgado" disabled><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="informeResponsable">Responsable</label>
+                <select class="form-select form-select-sm" id="informeResponsable" disabled><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="informeTipo">Tipo de bien</label>
+                <select class="form-select form-select-sm" id="informeTipo"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="informePeriferico">Periférico</label>
+                <select class="form-select form-select-sm" id="informePeriferico"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label class="form-label">Rango de fechas</label>
+                <div class="date-range-inputs">
+                  <input type="date" class="form-control form-control-sm" id="informeFechaDesde" aria-label="Fecha desde">
+                  <span class="date-range-sep">—</span>
+                  <input type="date" class="form-control form-control-sm" id="informeFechaHasta" aria-label="Fecha hasta">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- USUARIOS -->
       <div id="panelUsuarios" class="d-none">
         <div class="admin-split">
@@ -375,6 +444,10 @@
     <button type="button" class="nav-link d-none" id="tabCatalogosMobile" data-tab="catalogos">
       <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 7h5l2 2h11v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
       <span>Catálogos</span>
+    </button>
+    <button type="button" class="nav-link d-none" id="tabInformesMobile" data-tab="informes">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>Informes</span>
     </button>
     <button type="button" class="nav-link d-none" id="tabUsuariosMobile" data-tab="usuarios">
       <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-2.8 2.7-5 6-5s6 2.2 6 5M14 19c0-2 1.6-3.6 3.5-3.9"/></svg>

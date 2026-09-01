@@ -5,6 +5,7 @@ config.local.php
 # Desarrollo
 setup-hosts.bat
 *.zip
+/vendor/
 
 # Git / IDE
 .DS_Store

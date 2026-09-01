@@ -1,0 +1,11 @@
+{
+    "name": "bienes-app/trazabilidad",
+    "description": "Sistema de trazabilidad de bienes",
+    "require": {
+        "php": ">=8.2",
+        "phpoffice/phpspreadsheet": "^2.0"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

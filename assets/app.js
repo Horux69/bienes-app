@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const API_REGISTROS = 'api/bienes.php';
   const API_CATALOGOS = 'api/catalogos.php';
   const API_ADMIN = 'api/admin_catalogos.php';
+  const API_REPORTE = 'api/reporte.php';
 
   const appPrincipal     = document.getElementById('appPrincipal');
   const pageTitle        = document.getElementById('pageTitle');
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelListado     = document.getElementById('panelListado');
   const panelCatalogos   = document.getElementById('panelCatalogos');
   const panelUsuarios    = document.getElementById('panelUsuarios');
+  const panelInformes    = document.getElementById('panelInformes');
   const panelPerfil      = document.getElementById('panelPerfil');
   const formBien         = document.getElementById('formBien');
   const registroId       = document.getElementById('registroId');
@@ -94,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const perfilPasswordConfirm = document.getElementById('perfilPasswordConfirm');
   const btnGuardarPerfil   = document.getElementById('btnGuardarPerfil');
   const msgPerfil          = document.getElementById('msgPerfil');
+  const btnExportarListado = document.getElementById('btnExportarListado');
 
   const THUMB_PLACEHOLDER = `<div class="item-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 16l-5-5L5 20"/></svg></div>`;
 
@@ -103,7 +106,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let fotosEliminar = [];
   let registrosCache = [];
   let registrosTotal = 0;
-  let listadoFiltrosListos = false;
+  const informeBuscar      = document.getElementById('informeBuscar');
+  const informeMunicipio    = document.getElementById('informeMunicipio');
+  const informeJuzgado      = document.getElementById('informeJuzgado');
+  const informeResponsable  = document.getElementById('informeResponsable');
+  const informeTipo         = document.getElementById('informeTipo');
+  const informePeriferico   = document.getElementById('informePeriferico');
+  const informeFechaDesde   = document.getElementById('informeFechaDesde');
+  const informeFechaHasta   = document.getElementById('informeFechaHasta');
+  const btnExportarInforme  = document.getElementById('btnExportarInforme');
+  const btnPreviewInforme   = document.getElementById('btnPreviewInforme');
+  const btnLimpiarFiltrosInforme = document.getElementById('btnLimpiarFiltrosInforme');
+  const informePreview      = document.getElementById('informePreview');
+  const msgInforme          = document.getElementById('msgInforme');
   let debounceListado = null;
   let registroSeleccionado = null;
   let catalogoActual = 'municipios';
@@ -112,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let galeriaIndice = 0;
   let catalogosListos = null;
   let usuarioSesion = null;
+  let listadoFiltrosListos = false;
+  let informeFiltrosListos = false;
 
   fechaInput.value = new Date().toISOString().slice(0, 10);
 
@@ -152,9 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (usuarioSesion.rol === 'admin') {
       document.getElementById('navGroupAdmin')?.classList.remove('d-none');
-      ['tabCatalogosMobile', 'tabUsuariosMobile'].forEach(id => {
+      ['tabCatalogosMobile', 'tabUsuariosMobile', 'tabInformesMobile'].forEach(id => {
         document.getElementById(id)?.classList.remove('d-none');
       });
+      btnExportarListado?.classList.remove('d-none');
     }
 
     appPrincipal.classList.remove('d-none');
@@ -172,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     perfil: 'Mi perfil',
     catalogos: 'Catálogos',
     usuarios: 'Usuarios',
+    informes: 'Informes',
   };
 
   function cambiarTab(tab) {
@@ -183,8 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
     panelListado.classList.toggle('d-none', tab !== 'listado');
     panelCatalogos.classList.toggle('d-none', tab !== 'catalogos');
     panelUsuarios.classList.toggle('d-none', tab !== 'usuarios');
+    panelInformes?.classList.toggle('d-none', tab !== 'informes');
     panelPerfil.classList.toggle('d-none', tab !== 'perfil');
     if (tab === 'listado') cargarListado();
+    if (tab === 'informes') initInformes();
     if (tab === 'perfil') cargarPerfil();
     if (tab === 'catalogos') resetFormularioCatalogo().then(() => cargarCatalogoAdmin());
     if (tab === 'usuarios') { resetFormularioUsuario(); cargarUsuarios(); }
@@ -580,10 +601,22 @@ document.addEventListener('DOMContentLoaded', () => {
       || f.tipo_bien_id || f.periferico_id || f.fecha_desde || f.fecha_hasta);
   }
 
-  function construirQueryFiltros(f) {
+  function construirQueryFiltros(f, extra = {}) {
     const params = new URLSearchParams();
-    Object.entries(f).forEach(([k, v]) => { if (v) params.set(k, v); });
+    Object.entries({ ...f, ...extra }).forEach(([k, v]) => { if (v) params.set(k, v); });
     return params.toString();
+  }
+
+  function descargarInformeExcel(filtros) {
+    const qs = construirQueryFiltros(filtros);
+    window.location.href = `${API_REPORTE}?${qs}`;
+  }
+
+  async function previewInformeExcel(filtros) {
+    const qs = construirQueryFiltros(filtros, { preview: '1' });
+    const { resp, data } = await fetchApi(`${API_REPORTE}?${qs}`);
+    if (!resp.ok || !data.ok) throw new Error(data.error || 'No se pudo obtener la vista previa.');
+    return data;
   }
 
   async function asegurarFiltrosListado() {
@@ -814,6 +847,143 @@ document.addEventListener('DOMContentLoaded', () => {
     .forEach(el => el.addEventListener('change', aplicarFiltrosListado));
 
   btnLimpiarFiltros.addEventListener('click', limpiarFiltrosListado);
+
+  btnExportarListado?.addEventListener('click', () => {
+    descargarInformeExcel(obtenerFiltrosListado());
+  });
+
+  // ─── Informes (solo admin) ─────────────────────────────────
+  function obtenerFiltrosInforme() {
+    return {
+      q: informeBuscar?.value.trim() || '',
+      municipio_id: informeMunicipio?.value || '',
+      juzgado_id: informeJuzgado?.value || '',
+      responsable_id: informeResponsable?.value || '',
+      tipo_bien_id: informeTipo?.value || '',
+      periferico_id: informePeriferico?.value || '',
+      fecha_desde: informeFechaDesde?.value || '',
+      fecha_hasta: informeFechaHasta?.value || '',
+    };
+  }
+
+  async function asegurarFiltrosInforme() {
+    if (informeFiltrosListos) return;
+    const [municipios, tipos, perifericos] = await Promise.all([
+      fetchCatalogo('municipios'),
+      fetchCatalogo('tipos_bienes'),
+      fetchCatalogo('perifericos'),
+    ]);
+    llenarSelect(informeMunicipio, municipios, 'Todos');
+    llenarSelect(informeTipo, tipos, 'Todos');
+    llenarSelect(informePeriferico, perifericos, 'Todos');
+    informeFiltrosListos = true;
+  }
+
+  async function cargarJuzgadosInforme(municipioId, valor = '') {
+    if (!informeJuzgado || !informeResponsable) return;
+    informeJuzgado.disabled = true;
+    informeResponsable.disabled = true;
+    llenarSelect(informeJuzgado, [], 'Todos');
+    llenarSelect(informeResponsable, [], 'Todos');
+    if (!municipioId) {
+      informeJuzgado.disabled = false;
+      informeResponsable.disabled = false;
+      return;
+    }
+    const juzgados = await fetchCatalogo('juzgados', { municipio_id: municipioId });
+    llenarSelect(informeJuzgado, juzgados, 'Todos', valor);
+    informeJuzgado.disabled = false;
+  }
+
+  async function cargarResponsablesInforme(juzgadoId, valor = '') {
+    if (!informeResponsable) return;
+    informeResponsable.disabled = true;
+    llenarSelect(informeResponsable, [], 'Todos');
+    if (!juzgadoId) {
+      informeResponsable.disabled = false;
+      return;
+    }
+    const responsables = await fetchCatalogo('responsables', { juzgado_id: juzgadoId });
+    llenarSelect(informeResponsable, responsables, 'Todos', valor);
+    informeResponsable.disabled = false;
+  }
+
+  async function actualizarPreviewInforme() {
+    if (!informePreview) return;
+    try {
+      const data = await previewInformeExcel(obtenerFiltrosInforme());
+      let texto = `${data.exportara} registro(s)`;
+      if (data.truncado) texto += ` (de ${data.total})`;
+      informePreview.textContent = texto;
+    } catch {
+      informePreview.textContent = '—';
+    }
+  }
+
+  async function initInformes() {
+    await asegurarFiltrosInforme();
+    await actualizarPreviewInforme();
+  }
+
+  informeMunicipio?.addEventListener('change', async () => {
+    informeJuzgado.value = '';
+    informeResponsable.value = '';
+    await cargarJuzgadosInforme(informeMunicipio.value);
+    await actualizarPreviewInforme();
+  });
+
+  informeJuzgado?.addEventListener('change', async () => {
+    informeResponsable.value = '';
+    await cargarResponsablesInforme(informeJuzgado.value);
+    await actualizarPreviewInforme();
+  });
+
+  [informeResponsable, informeTipo, informePeriferico, informeFechaDesde, informeFechaHasta]
+    .forEach(el => el?.addEventListener('change', () => actualizarPreviewInforme()));
+
+  let informeBuscarTimer;
+  informeBuscar?.addEventListener('input', () => {
+    clearTimeout(informeBuscarTimer);
+    informeBuscarTimer = setTimeout(() => actualizarPreviewInforme(), 400);
+  });
+
+  btnLimpiarFiltrosInforme?.addEventListener('click', async () => {
+    if (informeBuscar) informeBuscar.value = '';
+    if (informeMunicipio) informeMunicipio.value = '';
+    if (informeJuzgado) informeJuzgado.value = '';
+    if (informeResponsable) informeResponsable.value = '';
+    if (informeTipo) informeTipo.value = '';
+    if (informePeriferico) informePeriferico.value = '';
+    if (informeFechaDesde) informeFechaDesde.value = '';
+    if (informeFechaHasta) informeFechaHasta.value = '';
+    await cargarJuzgadosInforme('');
+    await actualizarPreviewInforme();
+  });
+
+  btnExportarInforme?.addEventListener('click', () => {
+    if (msgInforme) {
+      msgInforme.textContent = 'Generando archivo…';
+      msgInforme.className = 'msg-feedback text-secondary';
+    }
+    descargarInformeExcel(obtenerFiltrosInforme());
+  });
+
+  btnPreviewInforme?.addEventListener('click', async () => {
+    if (!msgInforme) return;
+    msgInforme.textContent = '';
+    msgInforme.className = 'msg-feedback';
+    try {
+      const data = await previewInformeExcel(obtenerFiltrosInforme());
+      let texto = `Se exportarán ${data.exportara} registro(s). ${data.filtros}`;
+      if (data.truncado) texto += ` Solo se incluyen los primeros ${data.limite}.`;
+      msgInforme.textContent = texto;
+      msgInforme.classList.add('text-success');
+      if (informePreview) informePreview.textContent = `${data.exportara} registro(s)`;
+    } catch (err) {
+      msgInforme.textContent = err.message;
+      msgInforme.classList.add('text-danger');
+    }
+  });
 
   btnToggleFiltros.addEventListener('click', () => {
     const abierto = !filtrosListadoBody.classList.contains('d-none');
