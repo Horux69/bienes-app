@@ -34,11 +34,6 @@ function fmtFecha(?string $fecha): string
     return $fecha;
 }
 
-function fmtCheck(bool $valor): string
-{
-    return $valor ? 'Completado' : 'Pendiente';
-}
-
 function e(?string $texto): string
 {
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
@@ -79,6 +74,28 @@ function e(?string $texto): string
   }
   .check-pill.done { background: #dcfce7; color: #166534; }
   .check-pill.pending { background: #fef3c7; color: #92400e; }
+  .fotos-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eef2f7; }
+  .fotos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: .75rem;
+    margin-top: .75rem;
+  }
+  .foto-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8fafc;
+    cursor: pointer;
+  }
+  .foto-item img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #e2e8f0;
+  }
+  .foto-modal img { max-width: 100%; max-height: 80vh; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -101,6 +118,19 @@ function e(?string $texto): string
         <h1 class="h5 mt-3 mb-0"><?= e($registro['tipo_bien_nombre']) ?></h1>
       </div>
       <div class="consulta-body">
+        <?php if (!empty($registro['fotos'])): ?>
+        <div class="fotos-section mb-3 pb-0 border-0 mt-0 pt-0">
+          <div class="small text-secondary mb-2">Fotografías</div>
+          <div class="fotos-grid">
+            <?php foreach ($registro['fotos'] as $i => $foto): ?>
+              <button type="button" class="foto-item border-0 p-0" data-bs-toggle="modal" data-bs-target="#modalFoto" data-src="<?= e($foto['url_publica']) ?>" data-idx="<?= (int) $i ?>">
+                <img src="<?= e($foto['url_publica']) ?>" alt="Foto <?= (int) $i + 1 ?>" loading="lazy">
+              </button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
         <div class="detail-row">
           <div class="detail-label">Municipio</div>
           <div class="detail-value"><?= e($registro['municipio_nombre']) ?></div>
@@ -168,5 +198,29 @@ function e(?string $texto): string
     </div>
   <?php endif; ?>
 </div>
+
+<div class="modal fade foto-modal" id="modalFoto" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Fotografía</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center p-2">
+        <img src="" alt="Fotografía ampliada" id="modalFotoImg">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('modalFoto')?.addEventListener('show.bs.modal', (ev) => {
+  const btn = ev.relatedTarget;
+  if (!btn) return;
+  const img = document.getElementById('modalFotoImg');
+  if (img) img.src = btn.dataset.src || '';
+});
+</script>
 </body>
 </html>

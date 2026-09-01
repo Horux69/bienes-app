@@ -185,7 +185,25 @@ function obtenerRegistroPorCodigo(PDO $pdo, string $codigo): ?array
     $stmt->execute([(int) $registro['id']]);
     $registro['perifericos'] = $stmt->fetchAll();
 
+    $stmt = $pdo->prepare('
+        SELECT id, ruta, nombre_archivo, created_at
+        FROM fotos_bienes
+        WHERE registro_bien_id = ?
+        ORDER BY created_at
+    ');
+    $stmt->execute([(int) $registro['id']]);
+    $registro['fotos'] = $stmt->fetchAll();
+    foreach ($registro['fotos'] as &$foto) {
+        $foto['url_publica'] = urlFotoPublica($codigo, (int) $foto['id']);
+    }
+    unset($foto);
+
     return $registro;
+}
+
+function urlFotoPublica(string $codigo, int $fotoId): string
+{
+    return urlBaseApp() . '/ver_foto.php?codigo=' . rawurlencode($codigo) . '&id=' . $fotoId;
 }
 
 function urlConsultaPublica(string $codigo): string
