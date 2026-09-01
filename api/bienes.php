@@ -56,12 +56,15 @@ try {
             $codigo = generarCodigoTrazabilidad($pdo);
             $snap = $coherencia['snapshot'];
 
+            $checklist = checklistDesdeRequest($data);
+
             $stmt = $pdo->prepare('
                 INSERT INTO registros_bienes (
                   codigo, municipio_id, juzgado_id, responsable_id, tipo_bien_id,
                   cantidad, observaciones, fecha_registro,
-                  municipio_nombre, juzgado_nombre, responsable_nombre
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  municipio_nombre, juzgado_nombre, responsable_nombre,
+                  limpieza, embalado, rotulado, foto
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
             ');
             $stmt->execute([
@@ -76,11 +79,16 @@ try {
                 $snap['municipio_nombre'],
                 $snap['juzgado_nombre'],
                 $snap['responsable_nombre'],
+                $checklist['limpieza'],
+                $checklist['embalado'],
+                $checklist['rotulado'],
+                false,
             ]);
 
             $registroId = (int) $stmt->fetchColumn();
             guardarPerifericos($pdo, $registroId, $data['perifericos'] ?? []);
             guardarFotos($pdo, $registroId, $data['fotos'] ?? []);
+            sincronizarCheckFoto($pdo, $registroId);
 
             $registro = obtenerRegistroCompleto($pdo, $registroId);
             echo json_encode(['ok' => true, 'registro' => $registro, 'mensaje' => 'Bien registrado correctamente.']);
@@ -116,12 +124,14 @@ try {
             }
 
             $snap = $coherencia['snapshot'];
+            $checklist = checklistDesdeRequest($data);
 
             $stmt = $pdo->prepare('
                 UPDATE registros_bienes SET
                   municipio_id = ?, juzgado_id = ?, responsable_id = ?, tipo_bien_id = ?,
                   cantidad = ?, observaciones = ?, fecha_registro = ?,
                   municipio_nombre = ?, juzgado_nombre = ?, responsable_nombre = ?,
+                  limpieza = ?, embalado = ?, rotulado = ?,
                   updated_at = now()
                 WHERE id = ?
             ');
@@ -136,12 +146,16 @@ try {
                 $snap['municipio_nombre'],
                 $snap['juzgado_nombre'],
                 $snap['responsable_nombre'],
+                $checklist['limpieza'],
+                $checklist['embalado'],
+                $checklist['rotulado'],
                 $id,
             ]);
 
             guardarPerifericos($pdo, $id, $data['perifericos'] ?? []);
             eliminarFotos($pdo, $id, $data['fotos_eliminar'] ?? []);
             guardarFotos($pdo, $id, $data['fotos_nuevas'] ?? []);
+            sincronizarCheckFoto($pdo, $id);
 
             $registro = obtenerRegistroCompleto($pdo, $id);
             echo json_encode(['ok' => true, 'registro' => $registro, 'mensaje' => 'Registro actualizado correctamente.']);

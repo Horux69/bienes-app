@@ -134,6 +134,41 @@
               <div id="listaPerifericos" class="mb-2"></div>
               <button type="button" class="btn btn-outline-secondary btn-sm mb-4" id="btnAgregarPeriferico">+ Agregar periférico</button>
 
+              <div class="section-title">Preparación del bien</div>
+              <div class="checklist-preparacion mb-4">
+                <label class="checklist-item">
+                  <input type="checkbox" class="form-check-input" id="checkLimpieza">
+                  <span class="checklist-text">
+                    <span class="checklist-title">Limpieza</span>
+                    <span class="checklist-desc">El equipo ya fue limpiado</span>
+                  </span>
+                </label>
+                <label class="checklist-item">
+                  <input type="checkbox" class="form-check-input" id="checkEmbalado">
+                  <span class="checklist-text">
+                    <span class="checklist-title">Embalado</span>
+                    <span class="checklist-desc">Envuelto en el plástico necesario</span>
+                  </span>
+                </label>
+                <div class="checklist-item checklist-item-rotulado">
+                  <label class="checklist-item-inner">
+                    <input type="checkbox" class="form-check-input" id="checkRotulado">
+                    <span class="checklist-text">
+                      <span class="checklist-title">Rotulado</span>
+                      <span class="checklist-desc">Rótulo impreso y colocado en el bien</span>
+                    </span>
+                  </label>
+                  <button type="button" class="btn btn-sm btn-outline-primary d-none" id="btnImprimirRotulo">Imprimir rótulo</button>
+                </div>
+                <label class="checklist-item checklist-item-readonly">
+                  <input type="checkbox" class="form-check-input" id="checkFoto" disabled>
+                  <span class="checklist-text">
+                    <span class="checklist-title">Foto</span>
+                    <span class="checklist-desc">Se marca al agregar fotografías del bien</span>
+                  </span>
+                </label>
+              </div>
+
               <div class="section-title">Observaciones</div>
               <textarea class="form-control" id="observaciones" rows="3"
                         placeholder="Estado, ubicación, notas adicionales…"></textarea>
@@ -485,6 +520,7 @@
       </div>
       <div class="modal-body" id="modalDetalleBody"></div>
       <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-primary btn-sm d-none" id="btnImprimirRotuloModal">Imprimir rótulo</button>
         <button type="button" class="btn btn-brand btn-sm" id="btnEditarModal">Editar</button>
         <button type="button" class="btn btn-outline-danger btn-sm" id="btnEliminarModal">Eliminar</button>
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>

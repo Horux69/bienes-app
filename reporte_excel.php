@@ -21,7 +21,7 @@ function generarInformeExcel(array $registros, array $meta): string
     $detalle->setTitle('Detalle');
 
     $detalle->setCellValue('A1', 'Informe de trazabilidad de bienes');
-    $detalle->mergeCells('A1:M1');
+    $detalle->mergeCells('A1:Q1');
     $detalle->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
     $detalle->setCellValue('A2', 'Generado: ' . ($meta['generado_en'] ?? ''));
@@ -43,6 +43,10 @@ function generarInformeExcel(array $registros, array $meta): string
         'K' => 'Nº fotos',
         'L' => 'URLs fotos (web)',
         'M' => 'Registrado en sistema',
+        'N' => 'Limpieza',
+        'O' => 'Embalado',
+        'P' => 'Rotulado',
+        'Q' => 'Foto',
     ];
 
     $headerRow = 7;
@@ -50,7 +54,7 @@ function generarInformeExcel(array $registros, array $meta): string
         $detalle->setCellValue($col . $headerRow, $label);
     }
 
-    $headerStyle = $detalle->getStyle("A{$headerRow}:M{$headerRow}");
+    $headerStyle = $detalle->getStyle("A{$headerRow}:Q{$headerRow}");
     $headerStyle->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
     $headerStyle->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1F4E79');
     $headerStyle->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
@@ -70,17 +74,21 @@ function generarInformeExcel(array $registros, array $meta): string
         $detalle->setCellValue("K{$row}", (int) ($reg['num_fotos'] ?? 0));
         $detalle->setCellValue("L{$row}", $reg['fotos_urls_texto'] ?? '');
         $detalle->setCellValue("M{$row}", $reg['created_at'] ?? '');
+        $detalle->setCellValue("N{$row}", !empty($reg['limpieza']) ? 'Sí' : 'No');
+        $detalle->setCellValue("O{$row}", !empty($reg['embalado']) ? 'Sí' : 'No');
+        $detalle->setCellValue("P{$row}", !empty($reg['rotulado']) ? 'Sí' : 'No');
+        $detalle->setCellValue("Q{$row}", !empty($reg['foto']) ? 'Sí' : 'No');
 
         $detalle->getStyle("L{$row}")->getAlignment()->setWrapText(true);
         $row++;
     }
 
     if ($row > $headerRow + 1) {
-        $detalle->getStyle('A' . ($headerRow + 1) . ':M' . ($row - 1))
+        $detalle->getStyle('A' . ($headerRow + 1) . ':Q' . ($row - 1))
             ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
     }
 
-    foreach (range('A', 'M') as $col) {
+    foreach (range('A', 'Q') as $col) {
         $detalle->getColumnDimension($col)->setAutoSize(true);
     }
     $detalle->getColumnDimension('L')->setWidth(48);

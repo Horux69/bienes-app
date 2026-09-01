@@ -2,6 +2,25 @@
 
 require_once __DIR__ . '/db.php';
 
+function checklistDesdeRequest(array $data): array
+{
+    return [
+        'limpieza' => filter_var($data['limpieza'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        'embalado' => filter_var($data['embalado'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        'rotulado' => filter_var($data['rotulado'] ?? false, FILTER_VALIDATE_BOOLEAN),
+    ];
+}
+
+function sincronizarCheckFoto(PDO $pdo, int $registroId): void
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM fotos_bienes WHERE registro_bien_id = ?');
+    $stmt->execute([$registroId]);
+    $tieneFotos = (int) $stmt->fetchColumn() > 0;
+
+    $pdo->prepare('UPDATE registros_bienes SET foto = ? WHERE id = ?')
+        ->execute([$tieneFotos, $registroId]);
+}
+
 function generarCodigoTrazabilidad(PDO $pdo): string
 {
     $anio = date('Y');
@@ -135,6 +154,43 @@ function obtenerRegistroCompleto(PDO $pdo, int $id): ?array
     $registro['fotos'] = aplicarUrlsFotos($stmt->fetchAll());
 
     return $registro;
+}
+
+function obtenerRegistroPorCodigo(PDO $pdo, string $codigo): ?array
+{
+    $codigo = trim($codigo);
+    if ($codigo === '') {
+        return null;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT rb.*, tb.nombre AS tipo_bien_nombre, tb.unidad AS tipo_bien_unidad
+        FROM registros_bienes rb
+        INNER JOIN tipos_bienes tb ON tb.id = rb.tipo_bien_id
+        WHERE rb.codigo = ?
+    ');
+    $stmt->execute([$codigo]);
+    $registro = $stmt->fetch();
+    if (!$registro) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT p.nombre, rp.cantidad
+        FROM registro_perifericos rp
+        INNER JOIN perifericos p ON p.id = rp.periferico_id
+        WHERE rp.registro_bien_id = ?
+        ORDER BY p.nombre
+    ');
+    $stmt->execute([(int) $registro['id']]);
+    $registro['perifericos'] = $stmt->fetchAll();
+
+    return $registro;
+}
+
+function urlConsultaPublica(string $codigo): string
+{
+    return urlBaseApp() . '/ver.php?codigo=' . rawurlencode($codigo);
 }
 
 function aplicarUrlsFotos(array $fotos): array

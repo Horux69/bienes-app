@@ -96,6 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const perfilPasswordConfirm = document.getElementById('perfilPasswordConfirm');
   const btnGuardarPerfil   = document.getElementById('btnGuardarPerfil');
   const msgPerfil          = document.getElementById('msgPerfil');
+  const checkLimpieza      = document.getElementById('checkLimpieza');
+  const checkEmbalado      = document.getElementById('checkEmbalado');
+  const checkRotulado      = document.getElementById('checkRotulado');
+  const checkFoto          = document.getElementById('checkFoto');
+  const btnImprimirRotulo  = document.getElementById('btnImprimirRotulo');
+  const btnImprimirRotuloModal = document.getElementById('btnImprimirRotuloModal');
   const btnExportarListado = document.getElementById('btnExportarListado');
 
   const THUMB_PLACEHOLDER = `<div class="item-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 16l-5-5L5 20"/></svg></div>`;
@@ -358,6 +364,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function actualizarCheckFotoUI() {
+    const tieneFotos = fotosExistentes.length + fotosNuevas.length > 0;
+    if (checkFoto) checkFoto.checked = tieneFotos;
+  }
+
+  function actualizarBotonRotulo() {
+    const codigo = codigoTexto?.textContent?.trim();
+    const visible = !!codigo;
+    btnImprimirRotulo?.classList.toggle('d-none', !visible);
+  }
+
+  function resetChecklistPreparacion() {
+    if (checkLimpieza) checkLimpieza.checked = false;
+    if (checkEmbalado) checkEmbalado.checked = false;
+    if (checkRotulado) checkRotulado.checked = false;
+    if (checkFoto) checkFoto.checked = false;
+    actualizarBotonRotulo();
+  }
+
+  function cargarChecklistPreparacion(reg) {
+    if (checkLimpieza) checkLimpieza.checked = !!reg.limpieza;
+    if (checkEmbalado) checkEmbalado.checked = !!reg.embalado;
+    if (checkRotulado) checkRotulado.checked = !!reg.rotulado;
+    actualizarCheckFotoUI();
+    actualizarBotonRotulo();
+  }
+
+  function abrirRotulo(codigo, marcarRotulado = true) {
+    if (!codigo) {
+      alert('Guarde el registro primero para generar el código de trazabilidad.');
+      return;
+    }
+    window.open(`rotulo.php?codigo=${encodeURIComponent(codigo)}`, '_blank', 'noopener');
+    if (marcarRotulado && checkRotulado) checkRotulado.checked = true;
+  }
+
+  btnImprimirRotulo?.addEventListener('click', () => {
+    abrirRotulo(codigoTexto?.textContent?.trim());
+  });
+
+  btnImprimirRotuloModal?.addEventListener('click', () => {
+    if (registroSeleccionado?.codigo) {
+      abrirRotulo(registroSeleccionado.codigo, false);
+    }
+  });
+
+  function renderChecklistBadges(reg) {
+    const items = [
+      ['Limpieza', reg.limpieza],
+      ['Embalado', reg.embalado],
+      ['Rotulado', reg.rotulado],
+      ['Foto', reg.foto],
+    ];
+    return `<div class="checklist-badges mb-3">${items.map(([label, done]) =>
+      `<span class="checklist-badge ${done ? 'done' : 'pending'}">${done ? '✓' : '○'} ${label}</span>`
+    ).join('')}</div>`;
+  }
+
   photoAdd.addEventListener('click', () => photoInput.click());
   photoInput.addEventListener('change', async () => {
     const file = photoInput.files[0];
@@ -389,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, () => abrirGaleria(todasUrls, indice));
       photoGrid.insertBefore(thumb, photoAdd);
     });
+    actualizarCheckFotoUI();
   }
 
   function crearThumb(src, onRemove, onView) {
@@ -482,6 +547,9 @@ document.addEventListener('DOMContentLoaded', () => {
       fecha_registro: fechaInput.value,
       observaciones: document.getElementById('observaciones').value.trim(),
       perifericos: obtenerPerifericosFormulario(),
+      limpieza: !!checkLimpieza?.checked,
+      embalado: !!checkEmbalado?.checked,
+      rotulado: !!checkRotulado?.checked,
     };
     if (esEdicion) {
       payload.id = parseInt(registroId.value, 10);
@@ -520,7 +588,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!resp.ok || !data.ok) throw new Error(data.error || 'Error al guardar.');
 
       const codigo = data.registro?.codigo || '';
-      msgForm.textContent = data.mensaje + (codigo ? ` Código: ${codigo}` : '');
+      if (!esEdicion && codigo) {
+        msgForm.innerHTML = `${escapeHtml(data.mensaje)} Código: <strong>${escapeHtml(codigo)}</strong>. `
+          + `<a href="rotulo.php?codigo=${encodeURIComponent(codigo)}" target="_blank" rel="noopener">Imprimir rótulo</a>`;
+      } else {
+        msgForm.textContent = data.mensaje + (codigo ? ` Código: ${codigo}` : '');
+      }
       msgForm.classList.add('text-success');
 
       if (!esEdicion) resetFormulario();
@@ -551,6 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
     llenarSelect(responsableSelect, [], 'Seleccione responsable…');
     listaPerifericos.innerHTML = '';
     limpiarFotos();
+    resetChecklistPreparacion();
     asegurarCatalogos().catch(() => {});
   }
 
@@ -579,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fotosEliminar = [];
     fotosExistentes = [...(reg.fotos || [])];
     renderFotos();
+    cargarChecklistPreparacion(reg);
     cambiarTab('registrar');
   }
 
@@ -1074,6 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalDetalleBody.innerHTML = `
       <div class="text-center mb-3"><span class="code-badge">${escapeHtml(reg.codigo)}</span></div>
+      ${renderChecklistBadges(reg)}
       ${fotosHtml}
       <dl class="row small mb-0">
         <dt class="col-5">Municipio</dt><dd class="col-7">${escapeHtml(reg.municipio_nombre)}</dd>
@@ -1091,6 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         abrirGaleria(fotosUrls, parseInt(img.dataset.idx, 10));
       });
     });
+    btnImprimirRotuloModal?.classList.toggle('d-none', !reg.codigo);
     modalDetalle.show();
   }
 

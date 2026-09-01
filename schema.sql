@@ -58,6 +58,10 @@ CREATE TABLE IF NOT EXISTS registros_bienes (
   municipio_nombre   TEXT NOT NULL,
   juzgado_nombre     TEXT NOT NULL,
   responsable_nombre TEXT NOT NULL,
+  limpieza           BOOLEAN NOT NULL DEFAULT false,
+  embalado           BOOLEAN NOT NULL DEFAULT false,
+  rotulado           BOOLEAN NOT NULL DEFAULT false,
+  foto               BOOLEAN NOT NULL DEFAULT false,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
