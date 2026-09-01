@@ -155,10 +155,11 @@
                     <input type="checkbox" class="form-check-input" id="checkRotulado">
                     <span class="checklist-text">
                       <span class="checklist-title">Rotulado</span>
-                      <span class="checklist-desc">Rótulo impreso y colocado en el bien</span>
+                      <span class="checklist-desc">Marque para imprimir el QR; confirme cuando el rótulo esté pegado en el bien</span>
                     </span>
                   </label>
-                  <button type="button" class="btn btn-sm btn-outline-primary d-none" id="btnImprimirRotulo">Imprimir rótulo</button>
+                  <button type="button" class="btn btn-sm btn-outline-primary d-none" id="btnImprimirRotulo" disabled>Imprimir rótulo</button>
+                  <p class="checklist-hint d-none" id="hintRotulado">Guarde el registro primero para habilitar la impresión.</p>
                 </div>
                 <label class="checklist-item checklist-item-readonly">
                   <input type="checkbox" class="form-check-input" id="checkFoto" disabled>

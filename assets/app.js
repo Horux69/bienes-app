@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const checkFoto          = document.getElementById('checkFoto');
   const btnImprimirRotulo  = document.getElementById('btnImprimirRotulo');
   const btnImprimirRotuloModal = document.getElementById('btnImprimirRotuloModal');
+  const hintRotulado       = document.getElementById('hintRotulado');
   const btnExportarListado = document.getElementById('btnExportarListado');
 
   const THUMB_PLACEHOLDER = `<div class="item-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 16l-5-5L5 20"/></svg></div>`;
@@ -389,10 +390,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (checkFoto) checkFoto.checked = tieneFotos;
   }
 
+  function obtenerCodigoFormulario() {
+    return codigoTexto?.textContent?.trim() || '';
+  }
+
   function actualizarBotonRotulo() {
-    const codigo = codigoTexto?.textContent?.trim();
-    const visible = !!codigo;
-    btnImprimirRotulo?.classList.toggle('d-none', !visible);
+    const codigo = obtenerCodigoFormulario();
+    const rotuladoActivo = !!checkRotulado?.checked;
+    const puedeImprimir = !!codigo && rotuladoActivo;
+
+    btnImprimirRotulo?.classList.toggle('d-none', !rotuladoActivo);
+    if (btnImprimirRotulo) {
+      btnImprimirRotulo.disabled = !puedeImprimir;
+    }
+
+    hintRotulado?.classList.toggle('d-none', !rotuladoActivo);
+    if (hintRotulado && codigo && rotuladoActivo) {
+      hintRotulado.textContent = 'Imprima el rótulo y pegue el QR en el bien.';
+    } else if (hintRotulado && !codigo && rotuladoActivo) {
+      hintRotulado.textContent = 'Guarde el registro primero para habilitar la impresión.';
+    }
   }
 
   function resetChecklistPreparacion() {
@@ -411,22 +428,31 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarBotonRotulo();
   }
 
-  function abrirRotulo(codigo, marcarRotulado = true) {
+  checkRotulado?.addEventListener('change', () => {
+    const codigo = obtenerCodigoFormulario();
+    if (checkRotulado.checked && !codigo) {
+      checkRotulado.checked = false;
+      alert('Guarde el registro primero. Se necesita el código de trazabilidad para imprimir el rótulo con QR.');
+      return;
+    }
+    actualizarBotonRotulo();
+  });
+
+  function abrirRotulo(codigo) {
     if (!codigo) {
       alert('Guarde el registro primero para generar el código de trazabilidad.');
       return;
     }
     window.open(`rotulo.php?codigo=${encodeURIComponent(codigo)}`, '_blank', 'noopener');
-    if (marcarRotulado && checkRotulado) checkRotulado.checked = true;
   }
 
   btnImprimirRotulo?.addEventListener('click', () => {
-    abrirRotulo(codigoTexto?.textContent?.trim());
+    abrirRotulo(obtenerCodigoFormulario());
   });
 
   btnImprimirRotuloModal?.addEventListener('click', () => {
     if (registroSeleccionado?.codigo) {
-      abrirRotulo(registroSeleccionado.codigo, false);
+      abrirRotulo(registroSeleccionado.codigo);
     }
   });
 
@@ -610,7 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const codigo = data.registro?.codigo || '';
       if (!esEdicion && codigo) {
         msgForm.innerHTML = `${escapeHtml(data.mensaje)} Código: <strong>${escapeHtml(codigo)}</strong>. `
-          + `<a href="rotulo.php?codigo=${encodeURIComponent(codigo)}" target="_blank" rel="noopener">Imprimir rótulo</a>`;
+          + `Edite el registro, marque <strong>Rotulado</strong> e imprima el QR, `
+          + `o use <a href="rotulo.php?codigo=${encodeURIComponent(codigo)}" target="_blank" rel="noopener">Imprimir rótulo</a> directamente.`;
       } else {
         msgForm.textContent = data.mensaje + (codigo ? ` Código: ${codigo}` : '');
       }
@@ -673,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fotosExistentes = [...(reg.fotos || [])];
     renderFotos();
     cargarChecklistPreparacion(reg);
+    actualizarBotonRotulo();
     cambiarTab('registrar', { mantenerFormulario: true });
   }
 
