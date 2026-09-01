@@ -496,16 +496,149 @@ body {
   margin-bottom: 16px;
 }
 
-.listado-toolbar .search-wrap { flex: 1; min-width: 200px; max-width: 100%; }
+.listado-toolbar .search-wrap {
+  flex: 1;
+  min-width: 200px;
+  max-width: 100%;
+  position: relative;
+}
 
 @media (min-width: 768px) {
   .listado-toolbar .search-wrap { max-width: 400px; }
 }
 
+.listado-toolbar .search-wrap::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+  pointer-events: none;
+}
+
+#buscarListado { padding-left: 36px; }
+
 .listado-filtros {
   padding: 16px 18px;
   margin-bottom: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+.listado-filtros.has-filters {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.filtros-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand);
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.filter-field {
+  transition: background 0.15s;
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  margin: -2px;
+}
+
+.filter-field.is-active .form-select,
+.filter-field.is-active .form-control {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.filter-field-dates {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 992px) {
+  .filter-field-dates { grid-column: span 2; }
+}
+
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.date-preset {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.date-preset:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.date-preset.is-active {
+  background: var(--brand-muted);
+  border-color: var(--brand);
+  color: var(--brand-dark);
+  font-weight: 600;
+}
+
+.date-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-range-inputs .form-control { flex: 1; min-width: 0; }
+
+.date-range-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.registros-grid.is-updating {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.listado-toolbar .search-wrap {
+  position: relative;
+}
+
+.listado-toolbar .search-wrap::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+  pointer-events: none;
+}
+
+#buscarListado { padding-left: 36px; }
 
 .listado-filtros-header {
   display: flex;

@@ -167,53 +167,59 @@
           <span class="stats-pill" id="statsRegistros">0 registros</span>
         </div>
 
-        <div class="listado-filtros card-panel">
+        <div class="listado-filtros card-panel" id="panelFiltrosListado">
           <div class="listado-filtros-header">
             <button type="button" class="btn btn-link btn-sm listado-filtros-toggle p-0" id="btnToggleFiltros" aria-expanded="true">
               <span class="section-title mb-0">Filtros</span>
+              <span class="filtros-count-badge d-none" id="filtrosCountBadge">0</span>
               <span class="filtros-toggle-icon">▾</span>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLimpiarFiltros">Limpiar filtros</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnLimpiarFiltros">Limpiar filtros</button>
           </div>
           <div id="filtrosListadoBody" class="listado-filtros-body">
             <div class="listado-filtros-grid">
-              <div>
+              <div class="filter-field" data-filter="municipio_id">
                 <label class="form-label" for="filtroMunicipio">Municipio</label>
                 <select class="form-select form-select-sm" id="filtroMunicipio">
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div>
+              <div class="filter-field" data-filter="juzgado_id">
                 <label class="form-label" for="filtroJuzgado">Juzgado</label>
                 <select class="form-select form-select-sm" id="filtroJuzgado" disabled>
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div>
+              <div class="filter-field" data-filter="responsable_id">
                 <label class="form-label" for="filtroResponsable">Responsable</label>
                 <select class="form-select form-select-sm" id="filtroResponsable" disabled>
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div>
+              <div class="filter-field" data-filter="tipo_bien_id">
                 <label class="form-label" for="filtroTipo">Tipo de bien</label>
                 <select class="form-select form-select-sm" id="filtroTipo">
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div>
+              <div class="filter-field" data-filter="periferico_id">
                 <label class="form-label" for="filtroPeriferico">Periférico</label>
                 <select class="form-select form-select-sm" id="filtroPeriferico">
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div>
-                <label class="form-label" for="filtroFechaDesde">Fecha desde</label>
-                <input type="date" class="form-control form-control-sm" id="filtroFechaDesde">
-              </div>
-              <div>
-                <label class="form-label" for="filtroFechaHasta">Fecha hasta</label>
-                <input type="date" class="form-control form-control-sm" id="filtroFechaHasta">
+              <div class="filter-field filter-field-dates" data-filter="fechas">
+                <label class="form-label">Rango de fechas</label>
+                <div class="date-presets" id="datePresets">
+                  <button type="button" class="date-preset" data-preset="mes">Este mes</button>
+                  <button type="button" class="date-preset" data-preset="30d">Últimos 30 días</button>
+                  <button type="button" class="date-preset" data-preset="anio">Este año</button>
+                </div>
+                <div class="date-range-inputs">
+                  <input type="date" class="form-control form-control-sm" id="filtroFechaDesde" aria-label="Fecha desde">
+                  <span class="date-range-sep">—</span>
+                  <input type="date" class="form-control form-control-sm" id="filtroFechaHasta" aria-label="Fecha hasta">
+                </div>
               </div>
             </div>
             <div id="filtrosActivos" class="filtros-chips d-none"></div>

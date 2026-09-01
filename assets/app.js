@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnToggleFiltros = document.getElementById('btnToggleFiltros');
   const filtrosListadoBody = document.getElementById('filtrosListadoBody');
   const filtrosActivos   = document.getElementById('filtrosActivos');
+  const panelFiltrosListado = document.getElementById('panelFiltrosListado');
+  const filtrosCountBadge = document.getElementById('filtrosCountBadge');
+  const datePresets      = document.getElementById('datePresets');
   const modalDetalle     = new bootstrap.Modal(document.getElementById('modalDetalle'));
   const modalDetalleBody = document.getElementById('modalDetalleBody');
   const btnEditarModal   = document.getElementById('btnEditarModal');
@@ -611,9 +614,71 @@ document.addEventListener('DOMContentLoaded', () => {
     filtroJuzgado.disabled = false;
   }
 
+  function contarFiltrosActivos(f) {
+    let n = 0;
+    if (f.q) n++;
+    if (f.municipio_id) n++;
+    if (f.juzgado_id) n++;
+    if (f.responsable_id) n++;
+    if (f.tipo_bien_id) n++;
+    if (f.periferico_id) n++;
+    if (f.fecha_desde || f.fecha_hasta) n++;
+    return n;
+  }
+
+  function actualizarEstadoFiltrosUI(f) {
+    const activos = hayFiltrosActivos(f);
+    const count = contarFiltrosActivos(f);
+
+    panelFiltrosListado?.classList.toggle('has-filters', activos);
+    btnLimpiarFiltros?.classList.toggle('d-none', !activos);
+
+    if (filtrosCountBadge) {
+      filtrosCountBadge.textContent = String(count);
+      filtrosCountBadge.classList.toggle('d-none', count === 0);
+    }
+
+    document.querySelectorAll('.filter-field').forEach(wrap => {
+      const key = wrap.dataset.filter;
+      let on = false;
+      if (key === 'fechas') on = !!(f.fecha_desde || f.fecha_hasta);
+      else if (key) on = !!f[key];
+      wrap.classList.toggle('is-active', on);
+    });
+
+    document.querySelectorAll('.date-preset').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.preset === presetFechaActivo);
+    });
+  }
+
+  let presetFechaActivo = '';
+
+  function fechaISO(d) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  function aplicarPresetFecha(preset) {
+    const hoy = new Date();
+    presetFechaActivo = preset;
+
+    if (preset === 'mes') {
+      filtroFechaDesde.value = fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+      filtroFechaHasta.value = fechaISO(hoy);
+    } else if (preset === '30d') {
+      const desde = new Date(hoy);
+      desde.setDate(desde.getDate() - 30);
+      filtroFechaDesde.value = fechaISO(desde);
+      filtroFechaHasta.value = fechaISO(hoy);
+    } else if (preset === 'anio') {
+      filtroFechaDesde.value = `${hoy.getFullYear()}-01-01`;
+      filtroFechaHasta.value = fechaISO(hoy);
+    }
+    aplicarFiltrosListado();
+  }
+
   async function cargarResponsablesFiltro(juzgadoId, valor = '') {
     filtroResponsable.disabled = true;
-    llenarSelect(filtroResponsable, [], 'Todos', '', true);
+    llenarSelect(filtroResponsable, [], 'Todos');
     if (!juzgadoId) {
       filtroResponsable.disabled = false;
       return;
@@ -624,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderFiltrosActivos(f) {
+    actualizarEstadoFiltrosUI(f);
     const chips = [];
     if (f.q) chips.push({ key: 'q', label: `Búsqueda: "${f.q}"` });
     if (f.municipio_id) chips.push({ key: 'municipio_id', label: `Municipio: ${filtroMunicipio.selectedOptions[0]?.text || ''}` });
@@ -660,8 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (key === 'responsable_id') filtroResponsable.value = '';
         else if (key === 'tipo_bien_id') filtroTipo.value = '';
         else if (key === 'periferico_id') filtroPeriferico.value = '';
-        else if (key === 'fecha_desde') filtroFechaDesde.value = '';
-        else if (key === 'fecha_hasta') filtroFechaHasta.value = '';
+        else if (key === 'fecha_desde') { filtroFechaDesde.value = ''; presetFechaActivo = ''; }
+        else if (key === 'fecha_hasta') { filtroFechaHasta.value = ''; presetFechaActivo = ''; }
         aplicarFiltrosListado();
       });
     });
@@ -716,9 +782,18 @@ document.addEventListener('DOMContentLoaded', () => {
     filtroPeriferico.value = '';
     filtroFechaDesde.value = '';
     filtroFechaHasta.value = '';
+    presetFechaActivo = '';
     cargarJuzgadosFiltro('');
     aplicarFiltrosListado();
   }
+
+  datePresets?.querySelectorAll('.date-preset').forEach(btn => {
+    btn.addEventListener('click', () => aplicarPresetFecha(btn.dataset.preset));
+  });
+
+  [filtroFechaDesde, filtroFechaHasta].forEach(el => {
+    el.addEventListener('change', () => { presetFechaActivo = ''; aplicarFiltrosListado(); });
+  });
 
   buscarListado.addEventListener('input', () => programarFiltrosListado(400));
 
@@ -735,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aplicarFiltrosListado();
   });
 
-  [filtroResponsable, filtroTipo, filtroPeriferico, filtroFechaDesde, filtroFechaHasta]
+  [filtroResponsable, filtroTipo, filtroPeriferico]
     .forEach(el => el.addEventListener('change', aplicarFiltrosListado));
 
   btnLimpiarFiltros.addEventListener('click', limpiarFiltrosListado);
@@ -757,11 +832,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (registros.length === 0) {
+      const vacioHtml = filtrado
+        ? `<p class="mb-3">No hay registros con estos filtros.</p>
+           <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLimpiarDesdeVacio">Limpiar filtros</button>`
+        : `<p class="mb-0">No hay registros para mostrar.</p>`;
       listaRegistros.innerHTML = `
         <div class="empty-state" style="grid-column:1/-1">
           <div class="empty-icon">—</div>
-          <p class="mb-0">${filtrado ? 'No hay registros con estos filtros.' : 'No hay registros para mostrar.'}</p>
+          ${vacioHtml}
         </div>`;
+      document.getElementById('btnLimpiarDesdeVacio')?.addEventListener('click', limpiarFiltrosListado);
       return;
     }
 
@@ -804,6 +884,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     });
+
+    listaRegistros.classList.add('is-updating');
+    requestAnimationFrame(() => listaRegistros.classList.remove('is-updating'));
   }
 
   function mostrarDetalle(reg) {
