@@ -2,12 +2,32 @@
 
 require_once __DIR__ . '/db.php';
 
+function normalizarBool(mixed $value): bool
+{
+    if (is_bool($value)) {
+        return $value;
+    }
+    if ($value === null || $value === '' || $value === 0 || $value === '0') {
+        return false;
+    }
+    if ($value === 1 || $value === '1') {
+        return true;
+    }
+    return (bool) filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
+/** Entero 0/1 para columnas BOOLEAN en PostgreSQL vía PDO (evita enviar '' con false). */
+function boolParaPg(mixed $value): int
+{
+    return normalizarBool($value) ? 1 : 0;
+}
+
 function checklistDesdeRequest(array $data): array
 {
     return [
-        'limpieza' => filter_var($data['limpieza'] ?? false, FILTER_VALIDATE_BOOLEAN),
-        'embalado' => filter_var($data['embalado'] ?? false, FILTER_VALIDATE_BOOLEAN),
-        'rotulado' => filter_var($data['rotulado'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        'limpieza' => normalizarBool($data['limpieza'] ?? false),
+        'embalado' => normalizarBool($data['embalado'] ?? false),
+        'rotulado' => normalizarBool($data['rotulado'] ?? false),
     ];
 }
 
@@ -18,7 +38,7 @@ function sincronizarCheckFoto(PDO $pdo, int $registroId): void
     $tieneFotos = (int) $stmt->fetchColumn() > 0;
 
     $pdo->prepare('UPDATE registros_bienes SET foto = ? WHERE id = ?')
-        ->execute([$tieneFotos, $registroId]);
+        ->execute([boolParaPg($tieneFotos), $registroId]);
 }
 
 function generarCodigoTrazabilidad(PDO $pdo): string

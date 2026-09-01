@@ -79,10 +79,10 @@ try {
                 $snap['municipio_nombre'],
                 $snap['juzgado_nombre'],
                 $snap['responsable_nombre'],
-                $checklist['limpieza'],
-                $checklist['embalado'],
-                $checklist['rotulado'],
-                false,
+                boolParaPg($checklist['limpieza']),
+                boolParaPg($checklist['embalado']),
+                boolParaPg($checklist['rotulado']),
+                0,
             ]);
 
             $registroId = (int) $stmt->fetchColumn();
@@ -146,9 +146,9 @@ try {
                 $snap['municipio_nombre'],
                 $snap['juzgado_nombre'],
                 $snap['responsable_nombre'],
-                $checklist['limpieza'],
-                $checklist['embalado'],
-                $checklist['rotulado'],
+                boolParaPg($checklist['limpieza']),
+                boolParaPg($checklist['embalado']),
+                boolParaPg($checklist['rotulado']),
                 $id,
             ]);
 
