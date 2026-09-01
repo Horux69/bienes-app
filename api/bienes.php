@@ -23,7 +23,17 @@ try {
                 }
                 echo json_encode(['ok' => true, 'registro' => $registro]);
             } else {
-                echo json_encode(['ok' => true, 'registros' => listarRegistros($pdo)]);
+                $filtros = array_filter([
+                    'municipio_id' => $_GET['municipio_id'] ?? null,
+                    'juzgado_id' => $_GET['juzgado_id'] ?? null,
+                    'responsable_id' => $_GET['responsable_id'] ?? null,
+                    'tipo_bien_id' => $_GET['tipo_bien_id'] ?? null,
+                    'fecha_desde' => $_GET['fecha_desde'] ?? null,
+                    'fecha_hasta' => $_GET['fecha_hasta'] ?? null,
+                    'periferico_id' => $_GET['periferico_id'] ?? null,
+                    'q' => trim($_GET['q'] ?? '') ?: null,
+                ], fn ($v) => $v !== null && $v !== '');
+                echo json_encode(['ok' => true, 'registros' => listarRegistros($pdo, $filtros)]);
             }
             break;
 

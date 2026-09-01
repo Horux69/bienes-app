@@ -162,10 +162,64 @@
         <div class="listado-toolbar">
           <div class="search-wrap">
             <input type="search" class="form-control" id="buscarListado"
-                   placeholder="Buscar por código, juzgado, municipio…">
+                   placeholder="Buscar por código, juzgado, municipio, responsable…" autocomplete="off">
           </div>
           <span class="stats-pill" id="statsRegistros">0 registros</span>
         </div>
+
+        <div class="listado-filtros card-panel">
+          <div class="listado-filtros-header">
+            <button type="button" class="btn btn-link btn-sm listado-filtros-toggle p-0" id="btnToggleFiltros" aria-expanded="true">
+              <span class="section-title mb-0">Filtros</span>
+              <span class="filtros-toggle-icon">▾</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLimpiarFiltros">Limpiar filtros</button>
+          </div>
+          <div id="filtrosListadoBody" class="listado-filtros-body">
+            <div class="listado-filtros-grid">
+              <div>
+                <label class="form-label" for="filtroMunicipio">Municipio</label>
+                <select class="form-select form-select-sm" id="filtroMunicipio">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtroJuzgado">Juzgado</label>
+                <select class="form-select form-select-sm" id="filtroJuzgado" disabled>
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtroResponsable">Responsable</label>
+                <select class="form-select form-select-sm" id="filtroResponsable" disabled>
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtroTipo">Tipo de bien</label>
+                <select class="form-select form-select-sm" id="filtroTipo">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtroPeriferico">Periférico</label>
+                <select class="form-select form-select-sm" id="filtroPeriferico">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtroFechaDesde">Fecha desde</label>
+                <input type="date" class="form-control form-control-sm" id="filtroFechaDesde">
+              </div>
+              <div>
+                <label class="form-label" for="filtroFechaHasta">Fecha hasta</label>
+                <input type="date" class="form-control form-control-sm" id="filtroFechaHasta">
+              </div>
+            </div>
+            <div id="filtrosActivos" class="filtros-chips d-none"></div>
+          </div>
+        </div>
+
         <div id="listaRegistros" class="registros-grid"></div>
       </div>
 

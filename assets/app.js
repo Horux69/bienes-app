@@ -33,6 +33,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const msgForm          = document.getElementById('msgForm');
   const listaRegistros   = document.getElementById('listaRegistros');
   const buscarListado    = document.getElementById('buscarListado');
+  const filtroMunicipio  = document.getElementById('filtroMunicipio');
+  const filtroJuzgado    = document.getElementById('filtroJuzgado');
+  const filtroResponsable= document.getElementById('filtroResponsable');
+  const filtroTipo       = document.getElementById('filtroTipo');
+  const filtroPeriferico = document.getElementById('filtroPeriferico');
+  const filtroFechaDesde = document.getElementById('filtroFechaDesde');
+  const filtroFechaHasta = document.getElementById('filtroFechaHasta');
+  const btnLimpiarFiltros= document.getElementById('btnLimpiarFiltros');
+  const btnToggleFiltros = document.getElementById('btnToggleFiltros');
+  const filtrosListadoBody = document.getElementById('filtrosListadoBody');
+  const filtrosActivos   = document.getElementById('filtrosActivos');
   const modalDetalle     = new bootstrap.Modal(document.getElementById('modalDetalle'));
   const modalDetalleBody = document.getElementById('modalDetalleBody');
   const btnEditarModal   = document.getElementById('btnEditarModal');
@@ -88,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let fotosExistentes = [];
   let fotosEliminar = [];
   let registrosCache = [];
+  let registrosTotal = 0;
+  let listadoFiltrosListos = false;
+  let debounceListado = null;
   let registroSeleccionado = null;
   let catalogoActual = 'municipios';
   let itemsCatalogoCache = [];
@@ -545,38 +559,208 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ─── Listado ───────────────────────────────────────────────
-  async function cargarListado() {
-    listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Cargando…</p></div>';
+  function obtenerFiltrosListado() {
+    return {
+      q: buscarListado.value.trim(),
+      municipio_id: filtroMunicipio.value,
+      juzgado_id: filtroJuzgado.value,
+      responsable_id: filtroResponsable.value,
+      tipo_bien_id: filtroTipo.value,
+      periferico_id: filtroPeriferico.value,
+      fecha_desde: filtroFechaDesde.value,
+      fecha_hasta: filtroFechaHasta.value,
+    };
+  }
+
+  function hayFiltrosActivos(f) {
+    return !!(f.q || f.municipio_id || f.juzgado_id || f.responsable_id
+      || f.tipo_bien_id || f.periferico_id || f.fecha_desde || f.fecha_hasta);
+  }
+
+  function construirQueryFiltros(f) {
+    const params = new URLSearchParams();
+    Object.entries(f).forEach(([k, v]) => { if (v) params.set(k, v); });
+    return params.toString();
+  }
+
+  async function asegurarFiltrosListado() {
+    if (listadoFiltrosListos) return;
+    const [municipios, tipos, perifericos] = await Promise.all([
+      fetchCatalogo('municipios'),
+      fetchCatalogo('tipos_bienes'),
+      fetchCatalogo('perifericos'),
+    ]);
+    llenarSelect(filtroMunicipio, municipios, 'Todos');
+    llenarSelect(filtroTipo, tipos, 'Todos');
+    llenarSelect(filtroPeriferico, perifericos, 'Todos');
+    listadoFiltrosListos = true;
+  }
+
+  async function cargarJuzgadosFiltro(municipioId, valor = '') {
+    filtroJuzgado.disabled = true;
+    filtroResponsable.disabled = true;
+    llenarSelect(filtroJuzgado, [], 'Todos');
+    llenarSelect(filtroResponsable, [], 'Todos');
+    if (!municipioId) {
+      filtroJuzgado.disabled = false;
+      filtroResponsable.disabled = false;
+      return;
+    }
+    const juzgados = await fetchCatalogo('juzgados', { municipio_id: municipioId });
+    llenarSelect(filtroJuzgado, juzgados, 'Todos', valor);
+    filtroJuzgado.disabled = false;
+  }
+
+  async function cargarResponsablesFiltro(juzgadoId, valor = '') {
+    filtroResponsable.disabled = true;
+    llenarSelect(filtroResponsable, [], 'Todos', '', true);
+    if (!juzgadoId) {
+      filtroResponsable.disabled = false;
+      return;
+    }
+    const responsables = await fetchCatalogo('responsables', { juzgado_id: juzgadoId });
+    llenarSelect(filtroResponsable, responsables, 'Todos', valor);
+    filtroResponsable.disabled = false;
+  }
+
+  function renderFiltrosActivos(f) {
+    const chips = [];
+    if (f.q) chips.push({ key: 'q', label: `Búsqueda: "${f.q}"` });
+    if (f.municipio_id) chips.push({ key: 'municipio_id', label: `Municipio: ${filtroMunicipio.selectedOptions[0]?.text || ''}` });
+    if (f.juzgado_id) chips.push({ key: 'juzgado_id', label: `Juzgado: ${filtroJuzgado.selectedOptions[0]?.text || ''}` });
+    if (f.responsable_id) chips.push({ key: 'responsable_id', label: `Responsable: ${filtroResponsable.selectedOptions[0]?.text || ''}` });
+    if (f.tipo_bien_id) chips.push({ key: 'tipo_bien_id', label: `Tipo: ${filtroTipo.selectedOptions[0]?.text || ''}` });
+    if (f.periferico_id) chips.push({ key: 'periferico_id', label: `Periférico: ${filtroPeriferico.selectedOptions[0]?.text || ''}` });
+    if (f.fecha_desde) chips.push({ key: 'fecha_desde', label: `Desde: ${formatearFecha(f.fecha_desde)}` });
+    if (f.fecha_hasta) chips.push({ key: 'fecha_hasta', label: `Hasta: ${formatearFecha(f.fecha_hasta)}` });
+
+    if (!chips.length) {
+      filtrosActivos.classList.add('d-none');
+      filtrosActivos.innerHTML = '';
+      return;
+    }
+
+    filtrosActivos.classList.remove('d-none');
+    filtrosActivos.innerHTML = chips.map(c => `
+      <button type="button" class="filtro-chip" data-filtro="${c.key}">
+        ${escapeHtml(c.label)} <span aria-hidden="true">&times;</span>
+      </button>
+    `).join('');
+
+    filtrosActivos.querySelectorAll('.filtro-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.filtro;
+        if (key === 'q') buscarListado.value = '';
+        else if (key === 'municipio_id') {
+          filtroMunicipio.value = '';
+          cargarJuzgadosFiltro('');
+        } else if (key === 'juzgado_id') {
+          filtroJuzgado.value = '';
+          cargarResponsablesFiltro('');
+        } else if (key === 'responsable_id') filtroResponsable.value = '';
+        else if (key === 'tipo_bien_id') filtroTipo.value = '';
+        else if (key === 'periferico_id') filtroPeriferico.value = '';
+        else if (key === 'fecha_desde') filtroFechaDesde.value = '';
+        else if (key === 'fecha_hasta') filtroFechaHasta.value = '';
+        aplicarFiltrosListado();
+      });
+    });
+  }
+
+  async function aplicarFiltrosListado() {
+    const f = obtenerFiltrosListado();
+    renderFiltrosActivos(f);
+
+    if (!hayFiltrosActivos(f)) {
+      renderListado(registrosCache, false);
+      return;
+    }
+
+    listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Filtrando…</p></div>';
+
     try {
-      const { data } = await fetchApi(API_REGISTROS);
-      if (!data.ok) throw new Error(data.error || 'Error al cargar.');
-      registrosCache = data.registros;
-      renderListado(registrosCache);
+      const qs = construirQueryFiltros(f);
+      const { data } = await fetchApi(`${API_REGISTROS}?${qs}`);
+      if (!data.ok) throw new Error(data.error || 'Error al filtrar.');
+      renderListado(data.registros, true);
     } catch (err) {
-      listaRegistros.innerHTML = `<div class="text-center text-danger small py-4">${escapeHtml(err.message)}</div>`;
+      listaRegistros.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p class="text-danger mb-0">${escapeHtml(err.message)}</p></div>`;
     }
   }
 
-  buscarListado.addEventListener('input', () => {
-    const q = buscarListado.value.trim().toLowerCase();
-    if (!q) { renderListado(registrosCache); return; }
-    const filtrados = registrosCache.filter(r =>
-      [r.codigo, r.municipio_nombre, r.juzgado_nombre, r.responsable_nombre, r.tipo_bien_nombre]
-        .some(c => (c || '').toLowerCase().includes(q))
-    );
-    renderListado(filtrados);
+  function programarFiltrosListado(delay = 300) {
+    clearTimeout(debounceListado);
+    debounceListado = setTimeout(aplicarFiltrosListado, delay);
+  }
+
+  async function cargarListado() {
+    listaRegistros.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner-border spinner-border-sm text-secondary"></div><p class="mt-2 mb-0 small">Cargando…</p></div>';
+    try {
+      await asegurarFiltrosListado();
+      const { data } = await fetchApi(API_REGISTROS);
+      if (!data.ok) throw new Error(data.error || 'Error al cargar.');
+      registrosCache = data.registros;
+      registrosTotal = data.registros.length;
+      await aplicarFiltrosListado();
+    } catch (err) {
+      listaRegistros.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p class="text-danger mb-0">${escapeHtml(err.message)}</p></div>`;
+    }
+  }
+
+  function limpiarFiltrosListado() {
+    buscarListado.value = '';
+    filtroMunicipio.value = '';
+    filtroJuzgado.value = '';
+    filtroResponsable.value = '';
+    filtroTipo.value = '';
+    filtroPeriferico.value = '';
+    filtroFechaDesde.value = '';
+    filtroFechaHasta.value = '';
+    cargarJuzgadosFiltro('');
+    aplicarFiltrosListado();
+  }
+
+  buscarListado.addEventListener('input', () => programarFiltrosListado(400));
+
+  filtroMunicipio.addEventListener('change', async () => {
+    filtroJuzgado.value = '';
+    filtroResponsable.value = '';
+    await cargarJuzgadosFiltro(filtroMunicipio.value);
+    aplicarFiltrosListado();
   });
 
-  function renderListado(registros) {
+  filtroJuzgado.addEventListener('change', async () => {
+    filtroResponsable.value = '';
+    await cargarResponsablesFiltro(filtroJuzgado.value);
+    aplicarFiltrosListado();
+  });
+
+  [filtroResponsable, filtroTipo, filtroPeriferico, filtroFechaDesde, filtroFechaHasta]
+    .forEach(el => el.addEventListener('change', aplicarFiltrosListado));
+
+  btnLimpiarFiltros.addEventListener('click', limpiarFiltrosListado);
+
+  btnToggleFiltros.addEventListener('click', () => {
+    const abierto = !filtrosListadoBody.classList.contains('d-none');
+    filtrosListadoBody.classList.toggle('d-none', abierto);
+    btnToggleFiltros.setAttribute('aria-expanded', String(!abierto));
+    btnToggleFiltros.querySelector('.filtros-toggle-icon').textContent = abierto ? '▸' : '▾';
+  });
+
+  function renderListado(registros, filtrado = false) {
     if (statsRegistros) {
-      statsRegistros.textContent = `${registros.length} registro${registros.length !== 1 ? 's' : ''}`;
+      if (filtrado && registros.length !== registrosTotal) {
+        statsRegistros.textContent = `${registros.length} de ${registrosTotal} registros`;
+      } else {
+        statsRegistros.textContent = `${registros.length} registro${registros.length !== 1 ? 's' : ''}`;
+      }
     }
 
     if (registros.length === 0) {
       listaRegistros.innerHTML = `
         <div class="empty-state" style="grid-column:1/-1">
           <div class="empty-icon">—</div>
-          <p class="mb-0">No hay registros para mostrar.</p>
+          <p class="mb-0">${filtrado ? 'No hay registros con estos filtros.' : 'No hay registros para mostrar.'}</p>
         </div>`;
       return;
     }
@@ -589,6 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="code-badge mb-2">${escapeHtml(r.codigo)}</div>
         <div class="item-title">${escapeHtml(r.tipo_bien_nombre)}</div>
         <div class="item-meta">${escapeHtml(r.juzgado_nombre)} · ${escapeHtml(r.municipio_nombre)}</div>
+        <div class="item-meta">${escapeHtml(r.responsable_nombre)}</div>
         <div class="item-meta mt-1">Cant: ${r.cantidad} · ${formatearFecha(r.fecha_registro)}</div>
       </div>
     `).join('');

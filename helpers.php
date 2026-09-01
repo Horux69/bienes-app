@@ -149,16 +149,65 @@ function aplicarUrlsFotos(array $fotos): array
     return $fotos;
 }
 
-function listarRegistros(PDO $pdo): array
+function listarRegistros(PDO $pdo, array $filtros = []): array
 {
-    $stmt = $pdo->query('
+    $where = ['1=1'];
+    $params = [];
+
+    if (!empty($filtros['municipio_id'])) {
+        $where[] = 'rb.municipio_id = ?';
+        $params[] = (int) $filtros['municipio_id'];
+    }
+    if (!empty($filtros['juzgado_id'])) {
+        $where[] = 'rb.juzgado_id = ?';
+        $params[] = (int) $filtros['juzgado_id'];
+    }
+    if (!empty($filtros['responsable_id'])) {
+        $where[] = 'rb.responsable_id = ?';
+        $params[] = (int) $filtros['responsable_id'];
+    }
+    if (!empty($filtros['tipo_bien_id'])) {
+        $where[] = 'rb.tipo_bien_id = ?';
+        $params[] = (int) $filtros['tipo_bien_id'];
+    }
+    if (!empty($filtros['fecha_desde'])) {
+        $where[] = 'rb.fecha_registro >= ?';
+        $params[] = $filtros['fecha_desde'];
+    }
+    if (!empty($filtros['fecha_hasta'])) {
+        $where[] = 'rb.fecha_registro <= ?';
+        $params[] = $filtros['fecha_hasta'];
+    }
+    if (!empty($filtros['periferico_id'])) {
+        $where[] = 'EXISTS (
+            SELECT 1 FROM registro_perifericos rp
+            WHERE rp.registro_bien_id = rb.id AND rp.periferico_id = ?
+        )';
+        $params[] = (int) $filtros['periferico_id'];
+    }
+    if (!empty($filtros['q'])) {
+        $where[] = '(
+            rb.codigo ILIKE ? OR rb.municipio_nombre ILIKE ? OR rb.juzgado_nombre ILIKE ?
+            OR rb.responsable_nombre ILIKE ? OR tb.nombre ILIKE ? OR rb.observaciones ILIKE ?
+        )';
+        $like = '%' . $filtros['q'] . '%';
+        array_push($params, $like, $like, $like, $like, $like, $like);
+    }
+
+    $sql = '
         SELECT rb.*, tb.nombre AS tipo_bien_nombre, tb.unidad AS tipo_bien_unidad,
-               (SELECT ruta FROM fotos_bienes fb WHERE fb.registro_bien_id = rb.id ORDER BY fb.created_at LIMIT 1) AS foto_principal
+               (SELECT ruta FROM fotos_bienes fb WHERE fb.registro_bien_id = rb.id ORDER BY fb.created_at LIMIT 1) AS foto_principal,
+               (SELECT COALESCE(string_agg(rp.periferico_id::text, \',\'), \'\')
+                FROM registro_perifericos rp WHERE rp.registro_bien_id = rb.id) AS periferico_ids
         FROM registros_bienes rb
         INNER JOIN tipos_bienes tb ON tb.id = rb.tipo_bien_id
+        WHERE ' . implode(' AND ', $where) . '
         ORDER BY rb.fecha_registro DESC, rb.created_at DESC
         LIMIT 500
-    ');
+    ';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $registros = $stmt->fetchAll();
 
     require_once __DIR__ . '/storage.php';
