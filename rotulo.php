@@ -122,6 +122,14 @@ if ($registro && !empty($registro['perifericos'])) {
     margin-top: 3mm; padding-top: 2mm; border-top: 1px dashed #cbd5e1;
     font-size: 6.5pt; color: #64748b; text-align: center;
   }
+  .rotulo-credit {
+    margin-top: 2mm;
+    font-size: 6pt;
+    color: #94a3b8;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
   .error-box {
     max-width: 480px; margin: 2rem auto; background: #fff; border-radius: 10px;
     padding: 1.25rem; border: 1px solid #fecaca; color: #b91c1c;
@@ -165,6 +173,7 @@ if ($registro && !empty($registro['perifericos'])) {
     .rotulo-qr { width: 20mm; height: 20mm; border-color: #000; }
     .rotulo-qr img { width: 18mm; height: 18mm; }
     .rotulo-foot { margin-top: 2mm; padding-top: 1.5mm; font-size: 6pt; }
+    .rotulo-credit { margin-top: 1.5mm; font-size: 5.5pt; color: #64748b; }
   }
 </style>
 </head>
@@ -203,6 +212,7 @@ if ($registro && !empty($registro['perifericos'])) {
       <div class="rotulo-line"><strong>Notas:</strong> <?= e(mb_strimwidth($registro['observaciones'], 0, 80, '…')) ?></div>
       <?php endif; ?>
       <div class="rotulo-foot">Escanee el QR para consultar este bien</div>
+      <div class="rotulo-credit">Desarrollado por SICOE</div>
     </div>
   </div>
 <?php endif; ?>
